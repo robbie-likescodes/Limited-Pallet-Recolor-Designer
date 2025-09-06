@@ -5,111 +5,26 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Palette Mapper</title>
 
+<!-- Primary stylesheet with cache-buster -->
+<link id="css-primary" rel="stylesheet" href="./styles.css?v=3">
+
+<!-- Preload helps on slow connections; onload flips to stylesheet -->
+<link rel="preload" as="style" href="./styles.css?v=3" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="./styles.css?v=3"></noscript>
+
+<!-- Tiny inline “safety net” so the page isn’t naked while CSS loads/fails -->
 <style>
-:root{
-  --bg:#0b1220; --card:#111827; --text:#e5e7eb; --muted:#9ca3af;
-  --brand:#3b82f6; --brand-2:#1f2937; --accent:#22c55e; --danger:#ef4444;
-  --border:#1f2937; --chip:#334155; --sw-outline:#334155;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  --radius:12px; --pad:14px; --gap:12px; --shadow:0 6px 24px rgba(0,0,0,.35);
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0; background:linear-gradient(180deg,#0a1020,#0b1220 20%,#0b1220);
-  color:var(--text); font:16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
-  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
-}
-header{
-  max-width:1100px; margin:24px auto 10px; padding:0 16px; display:flex; gap:12px; align-items:center; justify-content:space-between;
-}
-h1{margin:0 0 4px; font-size:clamp(28px,6vw,40px)}
-header p{margin:0;color:var(--muted)}
-main{max-width:1100px;margin:0 auto 120px;padding:0 16px;display:grid;gap:16px}
-.card{
-  background:radial-gradient(1200px 600px at 0 -200px, rgba(59,130,246,.12) 0%, transparent 55%) , var(--card);
-  border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow);
-}
-h2{margin:0 0 12px}
-h3{margin:8px 0}
-.row{display:flex; gap:10px; align-items:center}
-.grow{flex:1 1 auto}
-.help{color:var(--muted); margin:10px 0}
-
-.btn{
-  --bg:linear-gradient(180deg,#1f2937,#111827); --bd:#2b3546; --txt:#e5e7eb;
-  appearance:none; border:1px solid var(--bd); border-radius:10px;
-  padding:8px 12px; background:var(--bg); color:var(--txt); cursor:pointer;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 1px 0 rgba(255,255,255,.05);
-}
-.btn:hover{filter:brightness(1.04)}
-.btn:disabled{opacity:.5; cursor:not-allowed}
-.btn-ghost{
-  background:transparent; border-color:#2a3446; color:#c7d2fe;
-}
-.btn-danger{border-color:#7f1d1d; color:#fecaca; background:linear-gradient(180deg,#7f1d1d,#3f0d0d)}
-label.kv{display:inline-flex; align-items:center; gap:8px; padding:6px 8px; border:1px solid var(--border); border-radius:10px; background:#0d1526}
-label.kv .key{color:var(--muted)}
-.mono{font-family:var(--mono)}
-
-input[type="number"], select{
-  background:#0b1326; color:var(--text); border:1px solid var(--border);
-  padding:6px 8px; border-radius:8px; min-width:64px;
-}
-input[type="checkbox"]{width:18px;height:18px}
-
-input[type="range"]{accent-color:var(--brand)}
-
-.panel{border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#0a1122}
-.panel-head{padding:8px 10px; background:#0f1a33; border-bottom:1px solid var(--border)}
-#srcCanvas,#outCanvas{display:block; width:100%; height:auto; image-rendering:pixelated; background:#0b1326}
-
-#paletteList{display:grid; gap:8px; margin-top:8px}
-.palette-item{display:grid; grid-template-columns: 40px 110px 1fr auto auto; gap:10px; align-items:center}
-.palette-item .hex{width:110px; background:#0b1326; border:1px solid var(--border); color:var(--text); padding:6px 8px; border-radius:8px}
-.palette-item .tol{width:100%}
-.palette-item .tolv{min-width:36px; text-align:right}
-.palette-item .remove{border-color:#3a2a2a}
-
-#restrictedList{display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap:8px; margin-top:10px}
-.rp-item{display:flex; gap:8px; align-items:center; background:#0d1526; border:1px solid var(--border); padding:8px 10px; border-radius:10px}
-.rp-item .chip{width:18px;height:18px;border-radius:6px;border:1px solid var(--sw-outline); display:inline-block}
-
-.code-list{display:grid; gap:6px; margin-top:8px}
-.report-footer{color:var(--muted); margin-top:8px}
-
-.projects{
-  position:fixed; top:0; right:0; width:min(420px,95vw); height:100dvh;
-  background:var(--card); border-left:1px solid var(--border); transform:translateX(100%);
-  transition:transform .25s ease; z-index:50; display:flex; flex-direction:column;
-}
-.projects.open{transform:translateX(0)}
-.projects-head{display:flex; align-items:center; justify-content:space-between; padding:12px; border-bottom:1px solid var(--border)}
-.projects-actions{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; padding:12px; border-bottom:1px solid var(--border)}
-.projects-list{padding:12px; display:grid; gap:8px; overflow:auto}
-.projects-list .item{display:flex; justify-content:space-between; gap:8px; padding:10px; border:1px solid var(--border); border-radius:10px; background:#0d1526; cursor:pointer}
-.projects-list .item.selected{outline:2px solid #60a5fa}
-
-#editorOverlay.hidden{display:none}
-#editorOverlay{position:fixed; inset:0; background:rgba(3,6,15,.85); backdrop-filter:blur(4px); z-index:60; display:grid; grid-template-rows:44px 1fr}
-.editor-toolbar{display:flex; align-items:center; gap:8px; padding:6px 8px; border-bottom:1px solid var(--border); background:#0f182c}
-#editCanvas,#editOverlay{grid-row:2; width:100%; height:calc(100dvh - 44px); display:block; position:absolute; left:0; top:44px}
-#editOverlay{pointer-events:none}
-.editor-right{position:fixed; right:10px; top:54px; width:300px; max-width:38vw; background:#0d1526; border:1px solid var(--border); border-radius:10px; padding:10px; display:none}
-@media (min-width:900px){ .editor-right{display:block} }
-.inline-swatches{display:flex; flex-wrap:wrap; gap:6px}
-.sw{display:inline-block}
-
-table{border-collapse:collapse; width:100%}
-th,td{border-bottom:1px solid var(--border); padding:6px 8px; text-align:left}
-.inkchip{display:inline-flex; align-items:center; gap:6px; margin:2px 6px 2px 0}
-.r-inks .chip{width:14px;height:14px;border:1px solid var(--sw-outline);border-radius:4px;display:inline-block}
-.r-density{width:140px}
-
-/* toast */
-#toasts{position:fixed; left:50%; bottom:18px; transform:translateX(-50%); display:grid; gap:8px; z-index:9999}
-#toasts>div{background:#0f172acc; border:1px solid #1f2937; color:#dbeafe; padding:10px 12px; border-radius:10px; backdrop-filter:blur(8px)}
+  /* Only minimal layout so it doesn't look broken if CSS misses */
+  body { margin:0; font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
+  header, main { padding: 16px; }
+  .btn { padding: 8px 12px; border-radius: 8px; border:1px solid #ccc; background:#e9eef5; }
+  .card { padding: 12px; margin: 0 0 16px; border:1px solid #ddd; border-radius: 10px; }
+  .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  /* This banner only appears if our real CSS fails (see JS check below) */
+  #cssWarning { display:none; background:#fff3cd; border:1px solid #ffe69c; color:#664d03; 
+                padding:10px; border-radius:8px; margin:12px; }
 </style>
+
 </head>
 <body>
 
@@ -121,75 +36,108 @@ th,td{border-bottom:1px solid var(--border); padding:6px 8px; text-align:left}
   <button id="openProjects" class="btn btn-ghost">Projects</button>
 </header>
 
+<div id="cssWarning">
+  <strong>Stylesheet didn’t load.</strong> I tried a few paths and a cache-busted URL.
+  Make sure <code>styles.css</code> sits next to this HTML (same folder) on GitHub Pages.
+</div>
+
 <main>
+
+  <!-- 1) Load image -->
   <section class="card">
     <h2>1) Load image</h2>
+
     <div class="row" style="gap:12px;flex-wrap:wrap">
+      <!-- Hidden real inputs (kept same IDs for app.js) -->
       <input id="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;opacity:0;width:1px;height:1px;">
       <input id="cameraInput" type="file" accept="image/*" capture="environment" style="position:absolute;left:-9999px;opacity:0;width:1px;height:1px;">
+
+      <!-- Proxy buttons that trigger the hidden inputs -->
       <button type="button" class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
       <button type="button" class="btn btn-ghost" onclick="document.getElementById('cameraInput').click()">Use Camera</button>
+
       <button id="pasteBtn" class="btn">Paste</button>
       <button id="resetBtn" class="btn btn-ghost" disabled>Reset</button>
     </div>
+
     <p class="help">Upload = choose from Photo Library/Camera. Camera = direct capture. PNG/JPG only (HEIC warns).</p>
+
     <div class="row">
       <label class="kv">
         <span class="key">Max preview width (px)</span>
         <input id="maxW" type="number" value="1400" min="200" max="4000">
       </label>
     </div>
+
     <div class="row">
       <label class="kv"><input id="keepFullRes" type="checkbox" checked> <span class="key">Process at full resolution</span></label>
       <label class="kv"><input id="sharpenEdges" type="checkbox"> <span class="key">Sharpen text edges</span></label>
     </div>
+
     <div class="panel">
       <div class="panel-head">Original</div>
       <canvas id="srcCanvas"></canvas>
     </div>
+
     <p class="help">Full-screen editor offers eyedrop + lasso. Long-press on iPhone; ALT-click on desktop.</p>
     <button id="openEditor" class="btn">Open full-screen editor</button>
   </section>
 
+  <!-- 2) Palette -->
   <section class="card">
     <h2>2) Palette</h2>
+
     <div class="row" style="gap:10px;flex-wrap:wrap">
       <button id="addColor" class="btn">+ Add color</button>
       <button id="clearColors" class="btn btn-ghost">Clear</button>
       <button id="loadExample" class="btn btn-ghost">Load example</button>
       <button id="savePalette" class="btn">Save current</button>
       <button id="clearSavedPalettes" class="btn btn-ghost">Clear saved</button>
+
       <div class="grow"></div>
+
       <label class="kv">
         <span class="key">K colors</span>
         <input id="kColors" type="number" min="2" max="16" value="10">
       </label>
       <button id="autoExtract" class="btn btn-ghost" disabled>Auto extract</button>
     </div>
+
     <div id="paletteList"></div>
+
     <h3 style="margin-top:14px">Saved Palettes</h3>
     <div id="savedPalettes" class="panel" style="padding:10px"></div>
   </section>
 
+  <!-- 3) Restricted Palette -->
   <section class="card">
     <h2>3) Restricted Palette (Final Inks)</h2>
+
     <div class="row" id="rpActions">
       <button id="restrictedSelectAll" class="btn btn-ghost">Select all</button>
       <button id="restrictedSelectNone" class="btn btn-ghost">Select none</button>
       <label class="kv"><input id="allowWhite" type="checkbox" checked> <span class="key">Allow White mixing</span></label>
     </div>
+
     <div id="restrictedList"></div>
   </section>
 
+  <!-- 3½) Mapping options -->
   <section class="card">
     <h2>4) Map + Preview</h2>
+
     <div class="row" id="weightsRow">
-      <label><span>Chroma weight <span id="wChromaOut" class="mono">1.00×</span></span>
-        <input id="wChroma" type="range" min="50" max="200" value="100"></label>
-      <label><span>Luma weight <span id="wLightOut" class="mono">1.00×</span></span>
-        <input id="wLight" type="range" min="50" max="200" value="100"></label>
+      <label>
+        <span>Chroma weight <span id="wChromaOut" class="mono">1.00×</span></span>
+        <input id="wChroma" type="range" min="50" max="200" value="100">
+      </label>
+      <label>
+        <span>Luma weight <span id="wLightOut" class="mono">1.00×</span></span>
+        <input id="wLight" type="range" min="50" max="200" value="100">
+      </label>
       <label class="kv"><input id="useDither" type="checkbox"> <span class="key">Floyd–Steinberg dithering</span></label>
-      <label class="kv"><span class="key">Background</span>
+      <label class="kv">
+        <span class="key">Background</span>
         <select id="bgMode">
           <option value="keep">Keep</option>
           <option value="white">Force white</option>
@@ -199,33 +147,48 @@ th,td{border-bottom:1px solid var(--border); padding:6px 8px; text-align:left}
       <button id="applyBtn" class="btn" disabled>Apply mapping</button>
       <button id="bigRegen" class="btn btn-ghost">Regenerate mapping</button>
     </div>
+
     <div class="panel">
       <div class="panel-head">Mapped</div>
       <canvas id="outCanvas"></canvas>
     </div>
+
     <div class="row" style="margin-top:10px">
-      <label class="kv"><span class="key">Export scale</span>
-        <select id="exportScale"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select>
+      <label class="kv">
+        <span class="key">Export scale</span>
+        <select id="exportScale">
+          <option value="1">1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+        </select>
       </label>
       <button id="downloadBtn" class="btn" disabled>Download PNG</button>
       <button id="vectorExport" class="btn btn-ghost" disabled>Export SVG</button>
     </div>
   </section>
 
+  <!-- 4) Texture / Replacement + Suggestions -->
   <section class="card">
-    <h2>5) Replacements &amp; Suggestions</h2>
+    <h2>5) Replacements & Suggestions</h2>
+
     <div class="row" style="gap:8px;flex-wrap:wrap">
       <button id="btnSuggestHueLuma" class="btn btn-ghost">Suggest by Hue &amp; Luma</button>
       <button id="btnSmartMix" class="btn btn-ghost">Smart Mix (target → inks)</button>
       <button id="addRule" class="btn">Add rule</button>
       <button id="btnRefreshOutput" class="btn btn-ghost">Refresh Output</button>
     </div>
+
     <div class="panel" style="padding:10px">
       <table id="rulesTable" style="width:100%">
-        <thead><tr><th>On</th><th>Target</th><th>Pattern</th><th>Inks</th><th>Density</th><th>Del</th></tr></thead>
+        <thead>
+          <tr>
+            <th>On</th><th>Target</th><th>Pattern</th><th>Inks</th><th>Density</th><th>Del</th>
+          </tr>
+        </thead>
         <tbody></tbody>
       </table>
     </div>
+
     <h3 style="margin-top:12px">Optional halftone preview</h3>
     <div class="row">
       <label class="kv"><input id="useHalftone" type="checkbox"> <span class="key">Show dot halftone preview</span></label>
@@ -235,34 +198,49 @@ th,td{border-bottom:1px solid var(--border); padding:6px 8px; text-align:left}
     </div>
   </section>
 
+  <!-- 5) Codes & Report -->
   <section class="card">
     <h2>6) Codes &amp; Report</h2>
+
     <div class="row" style="gap:12px">
-      <label class="kv"><span class="key">Code mode</span>
-        <select id="colorCodeMode"><option value="pms">PMS</option><option value="hex">HEX</option></select>
+      <label class="kv">
+        <span class="key">Code mode</span>
+        <select id="colorCodeMode">
+          <option value="pms">PMS</option>
+          <option value="hex">HEX</option>
+        </select>
       </label>
       <a id="mailtoLink" class="btn btn-ghost" href="#">Email prep</a>
       <button id="exportReport" class="btn">Export report</button>
     </div>
+
     <div id="codeList" class="code-list"></div>
     <div class="report-footer">Report lists FINAL inks (Restricted Palette). PMS matches are nearest by Lab distance.</div>
   </section>
 </main>
 
+<!-- Projects Drawer -->
 <aside id="projectsPane" class="projects" aria-hidden="true">
-  <div class="projects-head"><strong>Projects</strong><button id="closeProjects" class="btn btn-ghost">Close</button></div>
+  <div class="projects-head">
+    <strong>Projects</strong>
+    <button id="closeProjects" class="btn btn-ghost">Close</button>
+  </div>
+
   <div class="projects-actions">
     <button id="refreshProjects" class="btn btn-ghost">Refresh</button>
     <button id="saveProject" class="btn">Save</button>
     <button id="exportProject" class="btn btn-ghost">Export JSON</button>
-    <label class="btn btn-ghost" style="position:relative;overflow:hidden">Import
+    <label class="btn btn-ghost" style="position:relative;overflow:hidden">
+      Import
       <input id="importProject" type="file" accept="application/json" style="position:absolute;inset:0;opacity:0;">
     </label>
     <button id="deleteProject" class="btn btn-danger">Delete</button>
   </div>
+
   <div id="projectsList" class="projects-list"></div>
 </aside>
 
+<!-- Full-screen Editor -->
 <div id="editorOverlay" class="hidden" aria-hidden="true">
   <div class="editor-toolbar">
     <button id="toolEyedrop" class="btn btn-ghost">Eyedrop</button>
@@ -277,11 +255,14 @@ th,td{border-bottom:1px solid var(--border); padding:6px 8px; text-align:left}
     </div>
     <button id="editorDone" class="btn">Done</button>
   </div>
+
   <canvas id="editCanvas"></canvas>
   <canvas id="editOverlay"></canvas>
+
   <div class="editor-right">
     <h3>Palette</h3>
     <div id="editorPalette" class="inline-swatches"></div>
+
     <h3>Limit inks for lasso</h3>
     <div id="lassoChecks" class="chips"></div>
     <div class="row" style="margin-top:8px">
@@ -293,6 +274,45 @@ th,td{border-bottom:1px solid var(--border); padding:6px 8px; text-align:left}
 
 <div id="toasts"></div>
 
-<script src="./app.js"></script>
+<!-- Your JS bundle -->
+<script defer src="./app.js?v=3"></script>
+
+<!-- CSS load detector + fallback paths (helps with wrong path/caching on GH Pages) -->
+<script>
+(function ensureCSS(){
+  // If styles.css defines --bg, it should not be empty. If empty, CSS missed.
+  function cssLoaded(){
+    return getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() !== '';
+  }
+  function addLink(href){
+    const link = document.createElement('link');
+    link.rel = 'stylesheet'; link.href = href;
+    document.head.appendChild(link);
+    return link;
+  }
+  function showWarn(){ document.getElementById('cssWarning').style.display='block'; }
+
+  if (cssLoaded()) return;
+
+  // Try alternate hrefs in case of path issues
+  const tries = [
+    './styles.css?v=' + Date.now(),
+    '/styles.css?v=' + Date.now(),          // site root (GitHub Pages root)
+    'styles.css?v=' + Date.now()
+  ];
+
+  let i = 0;
+  (function tryNext(){
+    if (i >= tries.length) { showWarn(); return; }
+    const href = tries[i++];
+    const l = addLink(href);
+    // give the browser a moment, then check the var again
+    setTimeout(()=> cssLoaded() ? 0 : tryNext(), 150);
+  })();
+})();
+</script>
+
+<!-- Optional: ImageTracer for SVG export -->
+<!-- <script defer src="imagetracer_v1.2.6.min.js"></script> -->
 </body>
 </html>
