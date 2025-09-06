@@ -86,15 +86,15 @@
       Toggle which inks are allowed in the final output. Suggestions and mapping will only use these.
     </div>
     <div class="row">
-      <button id="rpSelectAll" type="button" class="ghost">Select all</button>
-      <button id="rpSelectNone" type="button" class="ghost">Select none</button>
+      <button id="restrictedSelectAll" type="button" class="ghost">Select all</button>
+      <button id="restrictedSelectNone" type="button" class="ghost">Select none</button>
       <label class="check">
-        <input id="rpAllowWhite" type="checkbox" checked />
+        <input id="allowWhite" type="checkbox" checked />
         Allow White mixing
       </label>
     </div>
-    <!-- Populated by JS with rows: checkbox + swatch + hex + (x) -->
-    <div id="rpList" class="palette-list"></div>
+    <!-- JS will populate each color with: checkbox + swatch + hex -->
+    <div id="restrictedList" class="palette-list"></div>
   </section>
 
   <!-- 4) Texture / Replacement (one color → pattern of inks) -->
@@ -103,13 +103,14 @@
     <p>Add rules to replace mapped hits of a given color with a 2+ ink pattern (checker, stripe, dots, ordered). Use “Suggest by Hue &amp; Luma” to auto-create starting rules.</p>
     <div class="row">
       <button id="btnSuggestHueLuma" type="button" class="ghost">Suggest by Hue &amp; Luma</button>
-      <button id="btnAddReplacement" type="button">+ Add replacement</button>
+      <button id="addRule" type="button">+ Add replacement</button>
       <label>Pattern
         <select id="texPattern">
           <option value="checker">Checker</option>
           <option value="ordered">Ordered</option>
           <option value="stripe">Stripe</option>
           <option value="dots">Dots</option>
+          <option value="stipple">Stipple</option>
         </select>
       </label>
     </div>
@@ -117,23 +118,22 @@
     <!-- Rules table -->
     <div class="panel" id="replacementRules">
       <div class="panel-head">Replacement Rules</div>
-      <div class="tiny-help">Enable/disable per rule. Edit inks (from the restricted set), pattern, and density. Drag to reorder (priority applies top-down).</div>
-      <table class="rules-table">
+      <div class="tiny-help">Enable/disable per rule. Edit inks (from the restricted set), pattern, and density. Priority is top-down.</div>
+      <table id="rulesTable" class="rules-table">
         <thead>
           <tr>
             <th>On/Off</th>
             <th>Target color</th>
-            <th>Inks</th>
             <th>Pattern</th>
+            <th>Inks</th>
             <th>Density</th>
-            <th>Edit inks</th>
             <th>Delete</th>
           </tr>
         </thead>
-        <tbody id="rulesTableBody"><!-- rows injected by JS --></tbody>
+        <tbody><!-- rows injected by JS --></tbody>
       </table>
       <div class="row" style="margin-top:10px">
-        <button id="btnRefreshOutput" type="button" class="ghost">Refresh output</button>
+        <button id="refreshOutputBtn" type="button" class="ghost">Refresh output</button>
       </div>
     </div>
   </section>
@@ -171,7 +171,7 @@
     <div class="row">
       <button id="applyBtn" type="button" disabled>Apply mapping</button>
       <button id="downloadBtn" type="button" disabled>Download PNG</button>
-      <button id="btnExportSVG" type="button" class="ghost" disabled>Download SVG</button>
+      <button id="vectorExportBtn" type="button" class="ghost" disabled>Download SVG</button>
     </div>
   </section>
 
@@ -189,7 +189,7 @@
         <input id="vecLockPalette" type="checkbox" checked />
         Lock to current palette
       </label>
-      <button id="btnVectorExport" type="button" class="ghost">Export SVG</button>
+      <button id="bigRegen" type="button">Regenerate mapping</button>
     </div>
     <div class="help">Uses Vectorize if present (vector.js), else falls back to ImageTracer (via imagetracer-loader.js).</div>
   </section>
@@ -266,12 +266,20 @@
     </aside>
   </div>
 
-  <!-- Toast container (if your JS uses it) -->
-  <div id="toastHost" aria-live="polite" aria-atomic="true"></div>
+  <!-- Toast container -->
+  <div id="toasts" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Scripts -->
-  <!-- imagetracer loader (optional; app.js can also import dynamically) -->
-  <script type="module" src="./js/imagetracer-loader.js?v=20250905" defer></script>
-  <script type="module" src="./js/app.js?v=20250905" defer></script>
+  <!-- Your vector lib (optional) -->
+  <script src="./js/vector.js" defer></script>
+
+  <!-- ImageTracer (fallback). Use your fork or local copy. -->
+  <!-- Example: GitHub Pages of your fork -->
+  <!-- <script src="https://robbie-likescodes.github.io/imagetracerjs/imagetracer_v1.2.6.js"></script> -->
+  <!-- Or local: -->
+  <!-- <script src="./js/workers/imagetracer_v1.2.6.js"></script> -->
+
+  <!-- App -->
+  <script src="./js/app.js?v=20250905" defer></script>
 </body>
 </html>
