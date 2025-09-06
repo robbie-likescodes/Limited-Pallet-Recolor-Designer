@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Limited Palette Recolor Designer</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Palette Mapper – Cup Print Helper</title>
 
-  <!-- Stylesheet -->
+  <!-- CSS -->
   <link rel="stylesheet" href="./css/styles.css" />
 </head>
 <body>
-  <!-- Header -->
   <header>
     <div class="header-left">
       <h1>Palette Mapper</h1>
@@ -20,43 +19,203 @@
     </div>
   </header>
 
-  <!-- Main content area (your sections/cards will render here) -->
-  <main id="app" class="container"></main>
+  <!-- 1) Load image -->
+  <section class="card">
+    <h2>1) Load image</h2>
+    <div class="row">
+      <input id="fileInput" type="file" accept="image/*" />
+      <input id="cameraInput" type="file" accept="image/*" capture="environment" />
+      <button id="pasteBtn" type="button">Paste</button>
+      <button id="resetBtn" type="button" disabled>Reset</button>
+    </div>
+    <div class="help">
+      “Upload” lets you choose from Photo Library or Camera on iOS.
+      “Camera” forces the camera only.
+    </div>
+    <div class="row">
+      <label>
+        Max preview width (px)
+        <input id="maxW" type="number" min="600" value="1400" />
+      </label>
+      <label class="check">
+        <input id="keepFullRes" type="checkbox" checked />
+        Process at full resolution
+      </label>
+      <label class="check">
+        <input id="sharpenEdges" type="checkbox" />
+        Sharpen text edges
+      </label>
+    </div>
+    <div class="panel">
+      <div class="panel-head">Original</div>
+      <!-- REQUIRED for JS -->
+      <canvas id="srcCanvas"></canvas>
 
-  <!-- Bootstatus overlay: shown until app.js signals ready -->
-  <div id="bootstatus"
-       style="position:fixed;left:8px;bottom:8px;background:#1f2937;color:#fff;padding:6px 10px;border-radius:6px;font:12px/1.2 ui-monospace,Menlo,Consolas,monospace;z-index:9999">
-    Loading app…
+      <div class="tiny-help">
+        Press &amp; hold to pick a color in the full-screen editor.
+        On desktop, ALT-click works on this preview.
+      </div>
+      <div class="row">
+        <button id="openEditor" type="button">Open full-screen editor</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2) Palette -->
+  <section class="card">
+    <h2>2) Palette</h2>
+    <div id="paletteList" class="palette-list"></div>
+    <div class="row">
+      <button id="addColor" type="button">+ Add color</button>
+      <button id="clearColors" class="ghost" type="button">Clear</button>
+      <button id="loadExample" class="ghost" type="button">Load example</button>
+      <button id="savePalette" class="ghost" type="button">Save current</button>
+      <button id="clearSavedPalettes" class="ghost" type="button">Clear saved</button>
+    </div>
+    <details>
+      <summary>Auto-extract from image (optional)</summary>
+      <div class="row">
+        <label>
+          K colors
+          <input id="kColors" type="number" min="2" max="16" value="6" />
+        </label>
+        <button id="autoExtract" type="button" disabled>Auto extract</button>
+      </div>
+    </details>
+    <h3>Saved Palettes</h3>
+    <div id="savedPalettes" class="saved-list"></div>
+  </section>
+
+  <!-- 3) Mapping -->
+  <section class="card">
+    <h2>3) Mapping options</h2>
+    <div class="row">
+      <label>
+        Chroma weight
+        <input id="wChroma" type="range" min="20" max="200" value="100" />
+        <span id="wChromaOut" class="mono"></span>
+      </label>
+      <label>
+        Lightness weight
+        <input id="wLight" type="range" min="20" max="200" value="100" />
+        <span id="wLightOut" class="mono"></span>
+      </label>
+    </div>
+    <div class="row">
+      <label class="check">
+        <input id="useDither" type="checkbox" />
+        Use Floyd–Steinberg dithering
+      </label>
+      <label>
+        Background
+        <select id="bgMode">
+          <option value="keep">Keep original</option>
+          <option value="white">Force white</option>
+          <option value="transparent">Transparent</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <button id="applyBtn" type="button" disabled>Apply mapping</button>
+      <button id="downloadBtn" type="button" disabled>Download PNG</button>
+    </div>
+  </section>
+
+  <!-- 4) Texture / Replace one color -->
+  <section class="card">
+    <h2>4) Texture / Replace one color</h2>
+    <div class="row">
+      <button id="btnSuggest" type="button" class="ghost">
+        Suggest by Hue &amp; Luma
+      </button>
+      <label>
+        Pattern
+        <select id="texPattern">
+          <option>Checker</option>
+          <option>Ordered</option>
+          <option>Stripe</option>
+          <option>Dots</option>
+        </select>
+      </label>
+    </div>
+    <div id="rulesBox" class="help"></div>
+  </section>
+
+  <!-- Output -->
+  <section class="card">
+    <h2>Mapped</h2>
+    <!-- REQUIRED for JS -->
+    <canvas id="outCanvas"></canvas>
+  </section>
+
+  <!-- 5) Codes & Report -->
+  <section class="card">
+    <h2>5) Codes &amp; Report</h2>
+    <label>
+      Show codes as:
+      <select id="colorCodeMode">
+        <option value="pms">PMS (default)</option>
+        <option value="hex">HEX</option>
+      </select>
+    </label>
+    <div id="codeList" class="code-list"></div>
+    <div class="row">
+      <button id="exportReport" type="button">Export report</button>
+      <a id="mailtoLink" class="ghost" href="#">Email to printer</a>
+    </div>
+  </section>
+
+  <!-- Projects Drawer -->
+  <aside id="projectsPane" class="projects" aria-hidden="true">
+    <div class="projects-head">
+      <h3>Projects</h3>
+      <button id="closeProjects" class="ghost" type="button">Close</button>
+    </div>
+    <div class="projects-actions row">
+      <button id="saveProject" type="button">Save</button>
+      <button id="refreshProjects" class="ghost" type="button">Refresh</button>
+      <button id="exportProject" class="ghost" type="button">Export</button>
+      <label class="filelike">Import
+        <input id="importProject" type="file" accept="application/json" hidden />
+      </label>
+      <button id="deleteProject" class="ghost danger" type="button">Delete</button>
+    </div>
+    <div id="projectsList" class="projects-list"></div>
+  </aside>
+
+  <!-- Full-screen editor -->
+  <div id="editorOverlay" class="hidden" aria-hidden="true">
+    <div class="editor-toolbar">
+      <button id="toolEyedrop" class="active">Eyedrop</button>
+      <button id="toolLasso">Lasso</button>
+      <button id="toolPan">Pan</button>
+      <div class="grow"></div>
+      <button id="editorDone">Done</button>
+    </div>
+    <canvas id="editCanvas"></canvas>
+    <canvas id="editOverlay"></canvas>
+    <aside class="editor-right">
+      <h3>Palette</h3>
+      <div id="editorPalette" class="editor-swatches"></div>
+      <h3>Eyedrop</h3>
+      <div class="row">
+        <span id="eyeSwatch" class="sw"></span>
+        <span id="eyeHex" class="mono">—</span>
+      </div>
+      <div class="row">
+        <button id="eyeAdd" type="button">Add</button>
+        <button id="eyeCancel" class="ghost" type="button">Cancel</button>
+      </div>
+      <h3>Lasso</h3>
+      <div id="lassoChecks" class="lasso-checks"></div>
+      <div class="row">
+        <button id="lassoSave" type="button" disabled>Save region</button>
+        <button id="lassoClear" class="ghost" type="button" disabled>Clear</button>
+      </div>
+    </aside>
   </div>
 
-  <!-- App entry point -->
-  <script type="module" src="./js/app.js"></script>
-
-  <!-- Error reporting -->
-  <script>
-    // Catch runtime errors
-    window.addEventListener('error', (e) => {
-      const el = document.getElementById('bootstatus');
-      if (!el) return;
-      el.style.background = '#7f1d1d';
-      el.textContent = 'Runtime error: ' + (e.message || e.type);
-      el.style.display = 'block';
-    });
-
-    // Catch module load/import errors
-    window.addEventListener('unhandledrejection', (e) => {
-      const el = document.getElementById('bootstatus');
-      if (!el) return;
-      el.style.background = '#7f1d1d';
-      el.textContent = 'Module load failed: ' + (e.reason && (e.reason.message || e.reason));
-      el.style.display = 'block';
-    });
-
-    // Hide bootstatus once your app signals it’s ready
-    document.addEventListener('app:ready', () => {
-      const el = document.getElementById('bootstatus');
-      if (el) el.style.display = 'none';
-    });
-  </script>
+  <!-- Scripts -->
+  <script type="module" src="./js/app.js" defer></script>
 </body>
 </html>
