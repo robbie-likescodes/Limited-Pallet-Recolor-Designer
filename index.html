@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
-  <title>Palette Mapper – Cup Print Helper</title>
+  <title>Palette Mapper – Limited Palette Recolor</title>
   <link rel="stylesheet" href="./css/styles.css" />
 </head>
 <body>
+  <!-- Header -->
   <header>
     <div class="header-left">
       <h1>Palette Mapper</h1>
@@ -22,167 +23,60 @@
     <h2>1) Load image</h2>
     <div class="row">
       <input id="fileInput" type="file" accept="image/*" />
-      <input id="cameraInput" type="file" accept="image/*" capture="environment" />
       <button id="pasteBtn" type="button">Paste</button>
       <button id="resetBtn" type="button" disabled>Reset</button>
     </div>
-    <div class="help">Tip: Long-press (mobile) / ALT-click (desktop) the preview to add a color to the Source Palette.</div>
-    <div class="row">
-      <label>Max preview width (px) <input id="maxW" type="number" min="600" value="1400" /></label>
-      <label class="check"><input id="keepFullRes" type="checkbox" checked /> Process at full resolution</label>
-      <label class="check"><input id="sharpenEdges" type="checkbox" /> Sharpen text edges</label>
-    </div>
+    <div class="help">Upload works with Photo Library or Camera on iOS.</div>
     <div class="panel">
       <div class="panel-head">Original</div>
       <canvas id="srcCanvas"></canvas>
-      <div class="tiny-help">Open editor to eyedrop / lasso: </div>
-      <div class="row">
-        <button id="openEditor" type="button">Open full-screen editor</button>
-      </div>
+      <div class="tiny-help">After an image loads, suggestions and restricted palette become available.</div>
     </div>
   </section>
 
-  <!-- 2) Source Palette -->
+  <!-- 2) Working palette (auto) -->
   <section class="card">
-    <h2>2) Source Palette</h2>
-    <div id="sourcePalette" class="palette-list"></div>
-    <div class="row">
-      <button id="addColor" type="button">+ Add color</button>
-      <button id="clearColors" class="ghost" type="button">Clear</button>
-      <button id="autoExtract" class="ghost" type="button" disabled>Auto extract (K-means)</button>
-      <label>K <input id="kColors" type="number" min="2" max="16" value="8" /></label>
-    </div>
+    <h2>2) Working Palette (auto)</h2>
+    <div class="help">This is the palette detected from the image. The Restricted Palette below decides which inks are allowed in the final output.</div>
+    <div id="workingList" class="palette-list"></div>
   </section>
 
-  <!-- 3) Restricted Palette (final inks you allow) -->
-  <section class="card">
+  <!-- 3) Restricted Palette -->
+  <section class="card" id="restrictedCard">
     <h2>3) Restricted Palette (Final Inks)</h2>
-    <div class="help">Toggle which inks are allowed in the final output. Suggestions and mapping will only use these.</div>
     <div class="row">
-      <button id="selectAllRestricted" class="ghost" type="button">Select all</button>
-      <button id="selectNoneRestricted" class="ghost" type="button">Select none</button>
-      <label class="check"><input id="includeWhite" type="checkbox" checked /> Allow White mixing</label>
+      <button id="rpSelectAll" class="ghost" type="button">Select all</button>
+      <button id="rpSelectNone" class="ghost" type="button">Select none</button>
+      <label class="check"><input id="rpAllowWhite" type="checkbox" checked /> Allow White mixing</label>
     </div>
-    <div id="restrictedPalette" class="restricted-list"></div>
+    <div id="restrictedList" class="restricted-list"></div>
   </section>
 
-  <!-- 4) Texture / Replacement (auto + manual) -->
-  <section class="card">
+  <!-- 4) Texture / Replacement -->
+  <section class="card" id="textureCard">
     <h2>4) Texture / Replacement</h2>
     <div class="row">
-      <button id="suggestByHueLuma" type="button" disabled>Suggest by Hue &amp; Luma</button>
-      <label>Pattern <select id="defaultPattern">
-        <option value="checker">Checker</option>
-        <option value="bayer4">Bayer 4×4</option>
-        <option value="stipple">Stipple</option>
-      </select></label>
-    </div>
-    <div id="suggestionsBox" class="sug-list"></div>
-
-    <details>
-      <summary>Manual Replace (pick a source color → mix of restricted inks)</summary>
-      <div class="row">
-        <label>Source color <select id="manualSource"></select></label>
-        <label>Target inks (hold ⌘/Ctrl to multi-select)
-          <select id="manualTargets" multiple size="5"></select>
-        </label>
-        <label>Pattern <select id="manualPattern">
+      <button id="btnSuggestHueLuma" type="button" disabled>Suggest by Hue &amp; Luma</button>
+      <label>Pattern
+        <select id="texPattern">
           <option value="checker">Checker</option>
-          <option value="bayer4">Bayer 4×4</option>
-          <option value="stipple">Stipple</option>
-        </select></label>
-        <label>Density <input id="manualDensity" type="range" min="0" max="1" step="0.01" value="0.5" /></label>
-        <button id="addManualReplace" type="button">Add / Update</button>
-      </div>
-    </details>
-  </section>
-
-  <!-- 5) Mapping options -->
-  <section class="card">
-    <h2>5) Mapping options</h2>
-    <div class="row">
-      <label>Chroma weight
-        <input id="wChroma" type="range" min="20" max="200" value="100" />
-        <span id="wChromaOut" class="mono"></span>
-      </label>
-      <label>Lightness weight
-        <input id="wLight" type="range" min="20" max="200" value="100" />
-        <span id="wLightOut" class="mono"></span>
-      </label>
-      <label class="check"><input id="useDither" type="checkbox" /> Floyd–Steinberg dither</label>
-      <label>Background
-        <select id="bgMode">
-          <option value="keep">Keep original</option>
-          <option value="white">Force white</option>
-          <option value="transparent">Transparent</option>
+          <option value="ordered">Ordered</option>
+          <option value="stripe">Stripe</option>
+          <option value="dots">Dots</option>
         </select>
       </label>
     </div>
+    <div id="replacementRules" class="rules"></div>
   </section>
 
-  <!-- 6) Output -->
+  <!-- Mapped preview (placeholder section you can integrate with your full pipeline) -->
   <section class="card">
-    <h2>6) Output</h2>
-    <div class="row">
-      <button id="refreshMappingBtn" type="button" disabled>🔁 Refresh Mapping</button>
-    </div>
+    <h2>Mapped (preview)</h2>
     <canvas id="outCanvas"></canvas>
-    <div class="row">
-      <button id="applyBtn" type="button" disabled>Apply mapping</button>
-      <button id="downloadBtn" type="button" disabled>Download PNG</button>
-      <button id="exportSvgBtn" type="button" disabled>Export SVG</button>
-    </div>
+    <div class="tiny-help">This demo file draws suggestions only; integrate with your full mapping pipeline to render final output here.</div>
   </section>
 
-  <!-- 7) Codes & Report -->
-  <section class="card">
-    <h2>7) Codes &amp; Report</h2>
-    <label>Show codes as:
-      <select id="colorCodeMode">
-        <option value="pms">PMS (default)</option>
-        <option value="hex">HEX</option>
-      </select>
-    </label>
-    <div id="codeList" class="code-list"></div>
-    <div class="row">
-      <button id="exportReport" type="button">Export report</button>
-      <a id="mailtoLink" class="ghost" href="#">Email to printer</a>
-    </div>
-  </section>
-
-  <!-- Full-screen Editor -->
-  <div id="editorOverlay" class="hidden" aria-hidden="true">
-    <div class="editor-toolbar">
-      <button id="toolEyedrop" class="active">Eyedrop</button>
-      <button id="toolLasso">Lasso</button>
-      <button id="toolPan">Pan</button>
-      <div class="grow"></div>
-      <button id="editorDone">Done</button>
-    </div>
-    <canvas id="editCanvas"></canvas>
-    <canvas id="editOverlay"></canvas>
-    <aside class="editor-right">
-      <h3>Palette</h3>
-      <div id="editorPalette" class="editor-swatches"></div>
-      <h3>Eyedrop</h3>
-      <div class="row">
-        <span id="eyeSwatch" class="sw"></span>
-        <span id="eyeHex" class="mono">—</span>
-      </div>
-      <div class="row">
-        <button id="eyeAdd" type="button">Add</button>
-        <button id="eyeCancel" class="ghost" type="button">Cancel</button>
-      </div>
-      <h3>Lasso</h3>
-      <div id="lassoChecks" class="lasso-checks"></div>
-      <div class="row">
-        <button id="lassoSave" type="button" disabled>Save region</button>
-        <button id="lassoClear" class="ghost" type="button" disabled>Clear</button>
-      </div>
-    </aside>
-  </div>
-
-  <!-- Projects Drawer (placeholder UI; persistence optional) -->
+  <!-- Projects Drawer -->
   <aside id="projectsPane" class="projects" aria-hidden="true">
     <div class="projects-head">
       <h3>Projects</h3>
@@ -200,7 +94,6 @@
     <div id="projectsList" class="projects-list"></div>
   </aside>
 
-  <!-- JS -->
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
