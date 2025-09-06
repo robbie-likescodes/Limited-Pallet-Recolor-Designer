@@ -4,10 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
   <title>Palette Mapper – Limited Palette Recolor</title>
-  <link rel="stylesheet" href="./css/styles.css" />
+  <!-- NOTE: index.html is inside /html, so we go up one level for css & js -->
+  <link rel="stylesheet" href="../css/styles.css" />
 </head>
 <body>
-  <!-- Header -->
   <header>
     <div class="header-left">
       <h1>Palette Mapper</h1>
@@ -18,7 +18,6 @@
     </div>
   </header>
 
-  <!-- 1) Load image -->
   <section class="card">
     <h2>1) Load image</h2>
     <div class="row">
@@ -26,7 +25,6 @@
       <button id="pasteBtn" type="button">Paste</button>
       <button id="resetBtn" type="button" disabled>Reset</button>
     </div>
-    <div class="help">Upload works with Photo Library or Camera on iOS.</div>
     <div class="panel">
       <div class="panel-head">Original</div>
       <canvas id="srcCanvas"></canvas>
@@ -34,14 +32,12 @@
     </div>
   </section>
 
-  <!-- 2) Working palette (auto) -->
   <section class="card">
     <h2>2) Working Palette (auto)</h2>
-    <div class="help">This is the palette detected from the image. The Restricted Palette below decides which inks are allowed in the final output.</div>
+    <div class="help">Detected from the image. “Restricted Palette” decides what inks are allowed.</div>
     <div id="workingList" class="palette-list"></div>
   </section>
 
-  <!-- 3) Restricted Palette -->
   <section class="card" id="restrictedCard">
     <h2>3) Restricted Palette (Final Inks)</h2>
     <div class="row">
@@ -52,7 +48,6 @@
     <div id="restrictedList" class="restricted-list"></div>
   </section>
 
-  <!-- 4) Texture / Replacement -->
   <section class="card" id="textureCard">
     <h2>4) Texture / Replacement</h2>
     <div class="row">
@@ -69,14 +64,11 @@
     <div id="replacementRules" class="rules"></div>
   </section>
 
-  <!-- Mapped preview (placeholder section you can integrate with your full pipeline) -->
   <section class="card">
     <h2>Mapped (preview)</h2>
     <canvas id="outCanvas"></canvas>
-    <div class="tiny-help">This demo file draws suggestions only; integrate with your full mapping pipeline to render final output here.</div>
   </section>
 
-  <!-- Projects Drawer -->
   <aside id="projectsPane" class="projects" aria-hidden="true">
     <div class="projects-head">
       <h3>Projects</h3>
@@ -94,6 +86,7 @@
     <div id="projectsList" class="projects-list"></div>
   </aside>
 
-  <script type="module" src="./js/app.js"></script>
+  <!-- NOTE: index.html is inside /html, so use ../js/app.js -->
+  <script type="module" src="../js/app.js"></script>
 </body>
 </html>
