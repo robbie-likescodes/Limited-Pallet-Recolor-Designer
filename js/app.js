@@ -321,22 +321,23 @@ function getRestrictedInkIndices(){
 }
 
 /* -------------------------- Auto Palette (Hybrid) -------------------------- */
-function sampleImageDataForClustering(ctx, w, h, targetPixels = 120000) {
+// single-pass sampler (faster & more robust than row-by-row)
+function sampleForClusteringFast(ctx, w, h, targetPixels = 120000) {
   const step = Math.max(1, Math.floor(Math.sqrt((w * h) / targetPixels)));
-  const outW = Math.floor(w / step), outH = Math.floor(h / step);
-  const sampled = new Uint8ClampedArray(outW * outH * 4);
+  const data = ctx.getImageData(0, 0, w, h).data; // one read
+  const out = new Uint8ClampedArray(((Math.floor(h/step)+1) * (Math.floor(w/step)+1)) * 4);
   let si = 0;
   for (let y = 0; y < h; y += step) {
-    const row = ctx.getImageData(0, y, w, 1).data;
+    let rowStart = y * w * 4;
     for (let x = 0; x < w; x += step) {
-      const i = x * 4;
-      sampled[si++] = row[i];
-      sampled[si++] = row[i + 1];
-      sampled[si++] = row[i + 2];
-      sampled[si++] = row[i + 3];
+      const i = rowStart + x * 4;
+      out[si++] = data[i];
+      out[si++] = data[i + 1];
+      out[si++] = data[i + 2];
+      out[si++] = data[i + 3];
     }
   }
-  return sampled;
+  return out;
 }
 function kmeans(data,k=6,iters=10){
   const n=data.length/4;
@@ -366,27 +367,13 @@ function kmeans(data,k=6,iters=10){
   return centers;
 }
 function autoPaletteFromCanvasHybrid(canvas, k=10){
-  if(!canvas || !canvas.width) return;
+  if(!canvas || !canvas.width) { console.warn('autoPalette: no canvas yet'); return; }
   const ctx=canvas.getContext('2d',{willReadFrequently:true});
   const w=canvas.width,h=canvas.height;
-  const img=ctx.getImageData(0,0,w,h).data;
-
-  // 5-bit histogram seeds
-  const bins=new Map();
-  for(let i=0;i<img.length;i+=4){
-    if(img[i+3]<16) continue;
-    const r=img[i]>>3,g=img[i+1]>>3,b=img[i+2]>>3;
-    const key = (r<<10)|(g<<5)|b;
-    bins.set(key,(bins.get(key)||0)+1);
-  }
-  const seedsCount = Math.min(48, Math.max(k*4, k+4));
-  const ranked=[...bins.entries()].sort((a,b)=>b[1]-a[1]).slice(0,seedsCount).map(([key])=>{
-    const r=((key>>10)&31)<<3, g=((key>>5)&31)<<3, b=(key&31)<<3; return [r,g,b];
-  });
-
-  // init centers by sampling seeds
-  const sampled = sampleImageDataForClustering(ctx,w,h, 120000);
-  const centers = kmeans(sampled, k, 10);
+  // simple histogram (5-bit) is kept if needed later; KMeans uses fast sample
+  const sampled = sampleForClusteringFast(ctx,w,h, 120000);
+  const kk = Math.min(16, Math.max(2, (k|0)));
+  const centers = kmeans(sampled, kk, 10);
   setPalette(centers.map(([r,g,b])=>rgbToHex(r,g,b)));
 }
 
@@ -443,8 +430,12 @@ function drawPreviewFromState(){
   els.outCanvas.width=w; els.outCanvas.height=h;
   octx.clearRect(0,0,w,h); octx.imageSmoothingEnabled=false;
 
-  // Auto palette default
-  setTimeout(()=>{ try{ autoPaletteFromCanvasHybrid(els.srcCanvas, 10); } catch(e){ console.warn(e); } }, 0);
+  // Auto palette default — use current K slider
+  const k = parseInt(els.kColors?.value || '10', 10);
+  setTimeout(()=>{ 
+    try{ autoPaletteFromCanvasHybrid(els.srcCanvas, k); } 
+    catch(e){ console.warn('autoPalette failed', e); } 
+  }, 0);
 }
 
 /* -------------------------- Mapping engine + rules -------------------------- */
@@ -471,13 +462,11 @@ function mapToPalette(imgData, wL=1.0, wC=1.0, dither=false, bgMode='keep'){
         b=clamp(Math.round(b+(errB[idx]||0)),0,255);
       }
 
-      // find best palette color honoring per-color tolerance (if within tol, snap; else use distance)
       const lab=rgbToLab(r,g,b);
       let best=0, bestD=Infinity;
       for(let p=0;p<pal.length;p++){
         const d2=deltaE2Weighted(lab,pal[p].lab,wL,wC);
-        // soft bias if within tol
-        const inTol = Math.sqrt(d2) <= (pal[p].tol||64)*0.12; // empirical scale
+        const inTol = Math.sqrt(d2) <= (pal[p].tol||64)*0.12;
         const score = inTol ? d2*0.2 : d2;
         if(score<bestD){ bestD=score; best=p; }
       }
@@ -499,8 +488,6 @@ function mapToPalette(imgData, wL=1.0, wC=1.0, dither=false, bgMode='keep'){
   }
   if(bgMode==='white'){
     for(let i=0;i<out.data.length;i+=4) out.data[i+3]=255;
-  }else if(bgMode==='transparent'){
-    // leave alpha as is (we don't cut it now)
   }
   return out;
 }
@@ -512,15 +499,13 @@ function applyTextureRules(baseData, wL=1, wC=1){
   const out=new ImageData(w,h);
   out.data.set(src);
 
-  // Build quick lookup: map hex->rule
   const rules = state.rules.filter(r=>r.enabled && r.inks && r.inks.length>=2);
   if(rules.length===0) return out;
 
   const palHex = getPaletteHex();
   const ruleByHex = new Map();
-  for(const r of rules){ ruleByHex.set(r.targetHex.toUpperCase(), r); }
+  for(const r of rules){ ruleByHex.set((r.targetHex||'').toUpperCase(), r); }
 
-  // pattern helpers
   const rnd = (x,y)=> ((Math.sin(x*12.9898+y*78.233)*43758.5453)%1+1)%1;
 
   for(let y=0;y<h;y++){
@@ -532,14 +517,12 @@ function applyTextureRules(baseData, wL=1, wC=1){
       const rule = ruleByHex.get(hx);
       if(!rule) continue;
 
-      // choose among inks according to pattern + density
-      const inks = rule.inks; // array of indices into palette
+      const inks = rule.inks;
       const density = clamp(rule.density??0.5,0,1);
       const ptype = rule.pattern || 'checker';
 
       let pick = 0;
       if(inks.length===2){
-        // 2-color
         if(ptype==='checker'){
           pick = ((x^y)&1) < (density*1) ? 0 : 1;
         }else if(ptype==='stripe'){
@@ -554,7 +537,6 @@ function applyTextureRules(baseData, wL=1, wC=1){
           pick = (rnd(x,y)<density)?0:1;
         }
       }else{
-        // 3+ inks: simple threshold buckets by density
         const t = (ptype==='stipple') ? rnd(x,y) : ((x&3)*0.125 + (y&3)*0.125);
         const idx=Math.min(inks.length-1, Math.floor(t * inks.length));
         pick=idx;
@@ -602,7 +584,6 @@ function renderHalftone(ctx, imgData, palette, bgHex, cell=6, jitter=false, wL=1
     for(let x=0;x<w;x+=cell){
       const cellRGB=avgCell(x,y); if(cellRGB.a===0) continue;
 
-      // choose nearest ink
       const lab=rgbToLab(cellRGB.r,cellRGB.g,cellRGB.b);
       let best=0, bestD=Infinity;
       for(let p=0;p<pal.length;p++){
@@ -629,35 +610,16 @@ function suggestByHueLuma(){
   if(allowed.length<2){ toast("Select at least 2 inks in Restricted Palette."); return; }
   if(!els.srcCanvas?.width){ toast("Load an image first."); return; }
 
-  // Build buckets by hue/luma on the CURRENT mapped preview image
   const src = sctx.getImageData(0,0,els.srcCanvas.width,els.srcCanvas.height).data;
   const pal = state.palette;
   const palHex = getPaletteHex();
-  const buckets = new Map(); // hex -> {count, lumaMean, hueMean...}
-  const toHsl=(r,g,b)=>{
-    r/=255; g/=255; b/=255;
-    const max=Math.max(r,g,b), min=Math.min(r,g,b); let h,s,l=(max+min)/2;
-    if(max===min){h=s=0;} else {
-      const d=max-min;
-      s=l>0.5? d/(2-max-min) : d/(max+min);
-      switch(max){
-        case r: h=(g-b)/d + (g<b?6:0); break;
-        case g: h=(b-r)/d + 2; break;
-        case b: h=(r-g)/d + 4; break;
-      }
-      h/=6;
-    }
-    return {h,s,l};
-  };
 
-  // Count usage of each palette color in the preview mapping
   const mapUsage=new Map(palHex.map(h=>[h,0]));
   for(let i=0;i<src.length;i+=4){
     const hx=rgbToHex(src[i],src[i+1],src[i+2]);
     if(mapUsage.has(hx)) mapUsage.set(hx, mapUsage.get(hx)+1);
   }
 
-  // Choose “drop candidates”: palette colors not in restricted set or minor contributors
   const restrictedSet=new Set(allowed);
   const dropTargets=[];
   palHex.forEach((hx,idx)=>{
@@ -668,12 +630,10 @@ function suggestByHueLuma(){
   });
   dropTargets.sort((a,b)=>b.count-a.count);
 
-  // For each drop target, propose a 2-ink pattern among allowed inks by perceived brightness
   const proposals = [];
   for(const t of dropTargets.slice(0, Math.min(10, dropTargets.length))){
     const rgb=hexToRgb(t.hx);
     const luma = 0.2126*rgb.r + 0.7152*rgb.g + 0.0722*rgb.b;
-    // pick two allowed inks: darkest & lightest relative to target
     const allowedRGB = allowed.map(i=>({i, rgb: {r:pal[i][0],g:pal[i][1],b:pal[i][2]}}));
     allowedRGB.sort((A,B)=>{
       const lA=0.2126*A.rgb.r+0.7152*A.rgb.g+0.0722*A.rgb.b;
@@ -696,7 +656,6 @@ function suggestByHueLuma(){
     });
   }
 
-  // merge proposals into rules (replace any prior autos for same targets)
   const keep = state.rules.filter(r=> !proposals.find(p=>p.targetHex.toUpperCase()===r.targetHex.toUpperCase()));
   state.rules = keep.concat(proposals);
   renderRulesTable();
@@ -704,16 +663,14 @@ function suggestByHueLuma(){
 }
 
 function smartMixSuggest(targetHex, allowedIndices){
-  // Grid search density for 2-ink combos; for 3-4 inks sample ordered thresholds
   const target = hexToRgb(targetHex); const tl=rgbToLab(target.r,target.g,target.b);
   const inks = allowedIndices.map(i=>({i, rgb:[state.palette[i][0],state.palette[i][1],state.palette[i][2]], lab:rgbToLab(state.palette[i][0],state.palette[i][1],state.palette[i][2])}));
 
   let best=null;
 
-  // try all 2-ink pairs
   for(let a=0;a<inks.length;a++){
     for(let b=a+1;b<inks.length;b++){
-      for(let d=0; d<=10; d++){ // 0..1 density
+      for(let d=0; d<=10; d++){
         const w = d/10;
         const mix = [
           Math.round(inks[a].rgb[0]*w + inks[b].rgb[0]*(1-w)),
@@ -739,7 +696,7 @@ function renderRulesTable(){
     const tr=document.createElement('tr');
     tr.innerHTML = `
       <td><input type="checkbox" class="r-on" ${r.enabled?'checked':''}></td>
-      <td><input type="text" class="r-target mono" value="${r.targetHex?.toUpperCase()||'#000000'}" size="8"></td>
+      <td><input type="text" class="r-target mono" value="${(r.targetHex||'#000000').toUpperCase()}" size="8"></td>
       <td>
         <select class="r-pattern">
           ${['checker','stripe','dots','ordered','stipple'].map(p=>`<option value="${p}" ${p===r.pattern?'selected':''}>${p}</option>`).join('')}
@@ -761,7 +718,6 @@ function renderRulesTable(){
       </td>
       <td><button class="ghost danger r-del">Delete</button></td>
     `;
-    // wire
     const onChk=tr.querySelector('.r-on');
     const tHex=tr.querySelector('.r-target');
     const pat =tr.querySelector('.r-pattern');
@@ -776,7 +732,6 @@ function renderRulesTable(){
     on(dens,'input',()=>{ r.density = clamp(dens.value/100,0,1); dval.textContent = `${Math.round(r.density*100)}%`; });
     on(del,'click',()=>{ state.rules.splice(idx,1); renderRulesTable(); });
     on(edit,'click',()=>{
-      // open a mini modal: pick inks from restricted set
       const allow = getRestrictedInkIndices();
       if(allow.length<2){ toast("Select at least 2 inks in Restricted Palette."); return; }
       const pick = prompt(`Enter comma separated indices of inks to use (Restricted indices only):\nAllowed: ${allow.join(', ')}`, r.inks.join(','));
@@ -816,15 +771,11 @@ function refreshOutput(){
   const mapped = mapToPalette(srcData, wL,wC, dither, bg);
   let final = mapped;
 
-  // texture rules
   if(state.rules.some(r=>r.enabled)) final = applyTextureRules(mapped, wL,wC);
-
-  // sharpen text edges (optional)
   if(els.sharpenEdges?.checked) final = unsharpMask(final, 0.35);
 
   state.outFullImageData = final;
 
-  // preview scale to maxW
   const previewW = Math.min(procCanvas.width, parseInt(els.maxW?.value||'1400',10));
   const s = previewW/procCanvas.width;
   els.outCanvas.width = Math.round(procCanvas.width*s);
@@ -835,13 +786,11 @@ function refreshOutput(){
   tmp.width=final.width; tmp.height=final.height;
   tmp.getContext('2d',{willReadFrequently:true}).putImageData(final,0,0);
 
-  // halftone preview if checked (rendered into display only)
   if(els.useHalftone?.checked){
     octx.clearRect(0,0,els.outCanvas.width,els.outCanvas.height);
     const disp=document.createElement('canvas');
     disp.width=final.width; disp.height=final.height;
     const dctx=disp.getContext('2d'); dctx.putImageData(final,0,0);
-    // render as dots using restricted inks only (if any) else full palette
     const inks = getRestrictedInkIndices();
     const palUse = (inks.length>=2) ? inks.map(i=>[state.palette[i][0],state.palette[i][1],state.palette[i][2]]) : getPaletteRGB();
     const cell=clamp(parseInt(els.dotCell?.value||'6',10),3,64);
@@ -852,8 +801,6 @@ function refreshOutput(){
     vis.width=final.width; vis.height=final.height;
     const vctx=vis.getContext('2d');
     renderHalftone(vctx, dctx.getImageData(0,0,disp.width,disp.height), palUse, bgHex, cell, jit, wL,wC);
-
-    // draw scaled
     octx.drawImage(vis, 0,0, els.outCanvas.width, els.outCanvas.height);
   }else{
     octx.drawImage(tmp, 0,0, els.outCanvas.width, els.outCanvas.height);
@@ -867,7 +814,7 @@ function refreshOutput(){
 function unsharpMask(imageData, amount=0.35){
   const w=imageData.width, h=imageData.height, src=imageData.data;
   const out=new ImageData(w,h); out.data.set(src);
-  const k=[0,-1,0,-1,5,-1,0,-1,0]; // simple sharpen
+  const k=[0,-1,0,-1,5,-1,0,-1,0];
   for(let y=1;y<h-1;y++){
     for(let x=1;x<w-1;x++){
       let r=0,g=0,b=0, ki=0;
@@ -955,7 +902,6 @@ function nearestPms(hex){
   PMS_CACHE.set(hex,out); return out;
 }
 function currentFinalPaletteCodes(){
-  // FINAL = restricted inks only (after replacements)
   const indices = getRestrictedInkIndices();
   const hexes = indices.map(i=>rgbToHex(state.palette[i][0],state.palette[i][1],state.palette[i][2]));
   return hexes.map((hex,i)=>{
@@ -1023,19 +969,15 @@ function openEditor(){
   editor.octx=els.editOverlay.getContext('2d',{willReadFrequently:true});
   editor.ectx.imageSmoothingEnabled=false; editor.octx.imageSmoothingEnabled=false;
 
-  // draw from preview canvas
   editor.ectx.clearRect(0,0,els.editCanvas.width,els.editCanvas.height);
   editor.ectx.drawImage(els.srcCanvas,0,0,els.editCanvas.width,els.editCanvas.height);
 
-  // palette swatches
   renderEditorPalette();
   buildLassoChecks();
 
-  // default tool: eyedrop
   setToolActive('toolEyedrop');
   enableEyedrop();
 
-  // hint
   toast("Tip: Long-press to eyedrop. Switch to Lasso to capture a region & limit to certain inks.");
 }
 function closeEditor(){
@@ -1079,7 +1021,6 @@ function enableEyedrop(){
 function disableEyedrop(){
   if(!els.editCanvas) return;
   els.editCanvas.replaceWith(els.editCanvas.cloneNode(true));
-  // re-grab canvas and contexts
   els.editCanvas = $("#editCanvas"); els.editOverlay=$("#editOverlay");
   editor.ectx=els.editCanvas.getContext('2d'); editor.octx=els.editOverlay.getContext('2d');
 }
@@ -1093,6 +1034,10 @@ on(els.eyeAdd,'click',()=>{
 on(els.eyeCancel,'click',()=> editor.octx?.clearRect(0,0,els.editOverlay.width,els.editOverlay.height));
 
 // Lasso
+function renderEditorPalette(){
+  if(!els.editorPalette) return;
+  els.editorPalette.innerHTML = getPaletteHex().map(h=>`<span class="sw" title="${h}" style="display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid #334155;background:${h}"></span>`).join('');
+}
 function buildLassoChecks(){
   if(!els.lassoChecks) return; els.lassoChecks.innerHTML='';
   getPaletteHex().forEach((hx,i)=>{
@@ -1124,7 +1069,6 @@ function enableLasso(){
   };
   const saveMask=()=>{
     if(!pts.length) return;
-    // rasterize to srcCanvas size
     const tw=els.srcCanvas.width, th=els.srcCanvas.height;
     const tmp=document.createElement('canvas'); tmp.width=tw; tmp.height=th; const tctx=tmp.getContext('2d');
     tctx.clearRect(0,0,tw,th); tctx.fillStyle='#fff'; tctx.beginPath();
@@ -1144,14 +1088,13 @@ function enableLasso(){
     toast("Region saved. Apply mapping to see effect.");
   };
 
-  // wire
   on(els.editCanvas,'pointerdown',begin,{passive:false});
   on(els.editCanvas,'pointermove',move,{passive:false});
   ['pointerup','pointerleave','pointercancel'].forEach(ev=> on(els.editCanvas,ev,end,{passive:false}));
   on(els.lassoSave,'click',saveMask);
   on(els.lassoClear,'click',()=>{ pts.length=0; editor.octx.clearRect(0,0,els.editOverlay.width,els.editOverlay.height); els.lassoSave.disabled=true; els.lassoClear.disabled=true; });
 }
-function disableLasso(){ /* events are torn down when overlay closes */ }
+function disableLasso(){ /* torn down by overlay close */ }
 
 /* -------------------------- Projects (IndexedDB) -------------------------- */
 const DB_NAME='pm_projects_db_v2', DB_STORE='projects';
@@ -1165,7 +1108,6 @@ async function saveCurrentProject(){
   if(!state.fullBitmap){ alert('Load an image first.'); return; }
   const name=prompt('Project name?')||`Project ${Date.now()}`;
 
-  // oriented original PNG
   const o=state.exifOrientation||1;
   const {w:ow,h:oh}=getOrientedDims(o,state.fullW,state.fullH);
   const tmp=document.createElement('canvas'); tmp.width=ow; tmp.height=oh; const tc=tmp.getContext('2d'); tc.imageSmoothingEnabled=false;
@@ -1213,12 +1155,11 @@ function applySettings(s){
   if(s.dotBg && els.dotBg) els.dotBg.value=s.dotBg;
   if('dotJitter' in s && els.dotJitter) els.dotJitter.checked=!!s.dotJitter;
   state.codeMode = (s.codeMode==='hex'?'hex':'pms');
-  // regions rasterize at current src size
+
   state.regions.length=0;
   if(s.regions && Array.isArray(s.regions) && els.srcCanvas?.width){
     s.regions.forEach(r=>{
       if(r.type==='polygon'){
-        // rasterize polygon to mask at src size
         const tw=els.srcCanvas.width, th=els.srcCanvas.height;
         const tmp=document.createElement('canvas'); tmp.width=tw; tmp.height=th; const tctx=tmp.getContext('2d');
         tctx.clearRect(0,0,tw,th); tctx.fillStyle='#fff'; tctx.beginPath();
@@ -1282,7 +1223,7 @@ function persistPrefs(){
     useDither: !!els.useDither?.checked,
     useHalftone: !!els.useHalftone?.checked,
     dotCell: parseInt(els.dotCell?.value||'6',10),
-    dotBg: els.dotBg?.value||'#FFFFFF',
+    dotBg: parseInt((els.dotBg?.value||'').replace(/\s+/g,'')||'0',10) ? els.dotBg.value : (els.dotBg?.value||'#FFFFFF'),
     dotJitter: !!els.dotJitter?.checked,
     codeMode: state.codeMode,
   };
@@ -1430,7 +1371,6 @@ function base64ToBlob(b64){ const byteChars=atob(b64); const len=byteChars.lengt
 
 /* -------------------------- Init -------------------------- */
 async function init(){
-  // prefs
   const prefs=loadPrefs();
   if(prefs.lastPalette) setPalette(prefs.lastPalette); else setPalette(['#FFFFFF','#000000']);
   if(prefs.keepFullRes!==undefined && els.keepFullRes) els.keepFullRes.checked=!!prefs.keepFullRes;
@@ -1449,14 +1389,13 @@ async function init(){
 
   updateWeightsUI();
   renderSavedPalettes();
-  await loadPmsJson(); // assets/pms_solid_coated.json
+  await loadPmsJson();
   renderCodeList();
   updateMailto();
   refreshProjectsList();
 
   bindEvents();
 
-  // gentle hints
   setTimeout(()=>toast('Tip: Build your Palette in Section 2, then choose inks in “Restricted Palette”.'), 600);
   setTimeout(()=>toast('Use “Suggest by Hue & Luma” to auto-create replacement rules; tweak densities, then Refresh Output.'), 2200);
 }
