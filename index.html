@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Limited Palette Recolor Designer</title>
 
-  <!-- Main stylesheet -->
-  <link rel="stylesheet" href="./css/styles.css">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="./css/styles.css" />
 </head>
 <body>
   <!-- Header -->
@@ -20,36 +20,43 @@
     </div>
   </header>
 
-  <!-- Main app container -->
-  <main id="app" class="container">
-    <!-- Your sections/cards/canvases remain here (Load Image, Palette, Mapping, etc.) -->
-  </main>
+  <!-- Main content area (your sections/cards will render here) -->
+  <main id="app" class="container"></main>
 
-  <!-- Bootstatus overlay (hidden when app.js loads correctly) -->
-  <div id="bootstatus" style="position:fixed;left:8px;bottom:8px;background:#1f2937;color:#fff;padding:6px 10px;border-radius:6px;font:12px/1.2 ui-monospace,Menlo,Consolas,monospace;z-index:9999">
+  <!-- Bootstatus overlay: shown until app.js signals ready -->
+  <div id="bootstatus"
+       style="position:fixed;left:8px;bottom:8px;background:#1f2937;color:#fff;padding:6px 10px;border-radius:6px;font:12px/1.2 ui-monospace,Menlo,Consolas,monospace;z-index:9999">
     Loading app…
   </div>
 
-  <!-- Entry point: your app -->
-  <script type="module">
-    import './app.js';
+  <!-- App entry point -->
+  <script type="module" src="./js/app.js"></script>
 
-    // Hide bootstatus if app loads
-    const boot = document.getElementById('bootstatus');
-    if (boot) boot.style.display = 'none';
-  </script>
-
-  <!-- Catch runtime errors and show them in the bootstatus -->
+  <!-- Error reporting -->
   <script>
-    window.addEventListener('error', function (e) {
+    // Catch runtime errors
+    window.addEventListener('error', (e) => {
       const el = document.getElementById('bootstatus');
-      if (el) {
-        el.textContent = 'Runtime error: ' + (e.message || e.type);
-        el.style.background = '#7f1d1d';
-        el.style.display = 'block';
-      }
+      if (!el) return;
+      el.style.background = '#7f1d1d';
+      el.textContent = 'Runtime error: ' + (e.message || e.type);
+      el.style.display = 'block';
+    });
+
+    // Catch module load/import errors
+    window.addEventListener('unhandledrejection', (e) => {
+      const el = document.getElementById('bootstatus');
+      if (!el) return;
+      el.style.background = '#7f1d1d';
+      el.textContent = 'Module load failed: ' + (e.reason && (e.reason.message || e.reason));
+      el.style.display = 'block';
+    });
+
+    // Hide bootstatus once your app signals it’s ready
+    document.addEventListener('app:ready', () => {
+      const el = document.getElementById('bootstatus');
+      if (el) el.style.display = 'none';
     });
   </script>
 </body>
 </html>
-
