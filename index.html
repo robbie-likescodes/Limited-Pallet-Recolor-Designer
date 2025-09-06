@@ -1,30 +1,24 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Palette Mapper</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Palette Mapper</title>
 
-<!-- Primary stylesheet with cache-buster -->
-<link id="css-primary" rel="stylesheet" href="./styles.css?v=3">
+  <!-- Primary stylesheet (same folder names you showed: css/styles.css) -->
+  <link rel="stylesheet" href="css/styles.css" />
 
-<!-- Preload helps on slow connections; onload flips to stylesheet -->
-<link rel="preload" as="style" href="./styles.css?v=3" onload="this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="./styles.css?v=3"></noscript>
-
-<!-- Tiny inline “safety net” so the page isn’t naked while CSS loads/fails -->
-<style>
-  /* Only minimal layout so it doesn't look broken if CSS misses */
-  body { margin:0; font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; }
-  header, main { padding: 16px; }
-  .btn { padding: 8px 12px; border-radius: 8px; border:1px solid #ccc; background:#e9eef5; }
-  .card { padding: 12px; margin: 0 0 16px; border:1px solid #ddd; border-radius: 10px; }
-  .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  /* This banner only appears if our real CSS fails (see JS check below) */
-  #cssWarning { display:none; background:#fff3cd; border:1px solid #ffe69c; color:#664d03; 
-                padding:10px; border-radius:8px; margin:12px; }
-</style>
-
+  <!-- Tiny inline fallback styles + warning if styles.css fails (harmless if it loads) -->
+  <style>
+    /* Only minimal spacing so the page isn’t raw if CSS fails */
+    body { margin: 0; font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    header, main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    .btn { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 10px; background: #eef2ff; }
+    .card { padding: 14px; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 16px; }
+    .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    #cssWarning { display:none; margin:16px 0; padding:12px; border-radius:10px; background:#fef3c7; border:1px solid #fcd34d; }
+  </style>
+  <noscript><style>#cssWarning{display:block}</style></noscript>
 </head>
 <body>
 
@@ -33,31 +27,31 @@
     <h1>Palette Mapper</h1>
     <p>Reduce photos to a limited ink set for cup/merch printing</p>
   </div>
-  <button id="openProjects" class="btn btn-ghost">Projects</button>
+  <button id="openProjects" class="btn">Projects</button>
 </header>
 
-<div id="cssWarning">
-  <strong>Stylesheet didn’t load.</strong> I tried a few paths and a cache-busted URL.
-  Make sure <code>styles.css</code> sits next to this HTML (same folder) on GitHub Pages.
-</div>
-
 <main>
+
+  <!-- CSS fallback banner (auto-hidden by styles.css) -->
+  <div id="cssWarning">
+    <strong>Stylesheet didn’t load.</strong> Make sure <code>css/styles.css</code> exists
+    at that path on GitHub Pages and the filename/casing matches.
+  </div>
 
   <!-- 1) Load image -->
   <section class="card">
     <h2>1) Load image</h2>
 
-    <div class="row" style="gap:12px;flex-wrap:wrap">
-      <!-- Hidden real inputs (kept same IDs for app.js) -->
-      <input id="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;opacity:0;width:1px;height:1px;">
-      <input id="cameraInput" type="file" accept="image/*" capture="environment" style="position:absolute;left:-9999px;opacity:0;width:1px;height:1px;">
+    <div class="row" style="gap:12px">
+      <!-- Real inputs kept off-screen so we can style proxy buttons -->
+      <input id="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;opacity:0;width:1px;height:1px">
+      <input id="cameraInput" type="file" accept="image/*" capture="environment" style="position:absolute;left:-9999px;opacity:0;width:1px;height:1px">
 
-      <!-- Proxy buttons that trigger the hidden inputs -->
       <button type="button" class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
-      <button type="button" class="btn btn-ghost" onclick="document.getElementById('cameraInput').click()">Use Camera</button>
+      <button type="button" class="btn" onclick="document.getElementById('cameraInput').click()">Use Camera</button>
 
       <button id="pasteBtn" class="btn">Paste</button>
-      <button id="resetBtn" class="btn btn-ghost" disabled>Reset</button>
+      <button id="resetBtn" class="btn" disabled>Reset</button>
     </div>
 
     <p class="help">Upload = choose from Photo Library/Camera. Camera = direct capture. PNG/JPG only (HEIC warns).</p>
@@ -87,12 +81,12 @@
   <section class="card">
     <h2>2) Palette</h2>
 
-    <div class="row" style="gap:10px;flex-wrap:wrap">
+    <div class="row" style="gap:10px">
       <button id="addColor" class="btn">+ Add color</button>
-      <button id="clearColors" class="btn btn-ghost">Clear</button>
-      <button id="loadExample" class="btn btn-ghost">Load example</button>
+      <button id="clearColors" class="btn">Clear</button>
+      <button id="loadExample" class="btn">Load example</button>
       <button id="savePalette" class="btn">Save current</button>
-      <button id="clearSavedPalettes" class="btn btn-ghost">Clear saved</button>
+      <button id="clearSavedPalettes" class="btn">Clear saved</button>
 
       <div class="grow"></div>
 
@@ -100,7 +94,7 @@
         <span class="key">K colors</span>
         <input id="kColors" type="number" min="2" max="16" value="10">
       </label>
-      <button id="autoExtract" class="btn btn-ghost" disabled>Auto extract</button>
+      <button id="autoExtract" class="btn" disabled>Auto extract</button>
     </div>
 
     <div id="paletteList"></div>
@@ -114,15 +108,15 @@
     <h2>3) Restricted Palette (Final Inks)</h2>
 
     <div class="row" id="rpActions">
-      <button id="restrictedSelectAll" class="btn btn-ghost">Select all</button>
-      <button id="restrictedSelectNone" class="btn btn-ghost">Select none</button>
+      <button id="restrictedSelectAll" class="btn">Select all</button>
+      <button id="restrictedSelectNone" class="btn">Select none</button>
       <label class="kv"><input id="allowWhite" type="checkbox" checked> <span class="key">Allow White mixing</span></label>
     </div>
 
     <div id="restrictedList"></div>
   </section>
 
-  <!-- 3½) Mapping options -->
+  <!-- 4) Map + Preview -->
   <section class="card">
     <h2>4) Map + Preview</h2>
 
@@ -145,7 +139,7 @@
         </select>
       </label>
       <button id="applyBtn" class="btn" disabled>Apply mapping</button>
-      <button id="bigRegen" class="btn btn-ghost">Regenerate mapping</button>
+      <button id="bigRegen" class="btn">Regenerate mapping</button>
     </div>
 
     <div class="panel">
@@ -163,19 +157,19 @@
         </select>
       </label>
       <button id="downloadBtn" class="btn" disabled>Download PNG</button>
-      <button id="vectorExport" class="btn btn-ghost" disabled>Export SVG</button>
+      <button id="vectorExport" class="btn" disabled>Export SVG</button>
     </div>
   </section>
 
-  <!-- 4) Texture / Replacement + Suggestions -->
+  <!-- 5) Replacements & Suggestions -->
   <section class="card">
     <h2>5) Replacements & Suggestions</h2>
 
-    <div class="row" style="gap:8px;flex-wrap:wrap">
-      <button id="btnSuggestHueLuma" class="btn btn-ghost">Suggest by Hue &amp; Luma</button>
-      <button id="btnSmartMix" class="btn btn-ghost">Smart Mix (target → inks)</button>
+    <div class="row" style="gap:8px">
+      <button id="btnSuggestHueLuma" class="btn">Suggest by Hue &amp; Luma</button>
+      <button id="btnSmartMix" class="btn">Smart Mix (target → inks)</button>
       <button id="addRule" class="btn">Add rule</button>
-      <button id="btnRefreshOutput" class="btn btn-ghost">Refresh Output</button>
+      <button id="btnRefreshOutput" class="btn">Refresh Output</button>
     </div>
 
     <div class="panel" style="padding:10px">
@@ -198,7 +192,7 @@
     </div>
   </section>
 
-  <!-- 5) Codes & Report -->
+  <!-- 6) Codes & Report -->
   <section class="card">
     <h2>6) Codes &amp; Report</h2>
 
@@ -210,7 +204,7 @@
           <option value="hex">HEX</option>
         </select>
       </label>
-      <a id="mailtoLink" class="btn btn-ghost" href="#">Email prep</a>
+      <a id="mailtoLink" class="btn" href="#">Email prep</a>
       <button id="exportReport" class="btn">Export report</button>
     </div>
 
@@ -223,35 +217,35 @@
 <aside id="projectsPane" class="projects" aria-hidden="true">
   <div class="projects-head">
     <strong>Projects</strong>
-    <button id="closeProjects" class="btn btn-ghost">Close</button>
+    <button id="closeProjects" class="btn">Close</button>
   </div>
 
   <div class="projects-actions">
-    <button id="refreshProjects" class="btn btn-ghost">Refresh</button>
+    <button id="refreshProjects" class="btn">Refresh</button>
     <button id="saveProject" class="btn">Save</button>
-    <button id="exportProject" class="btn btn-ghost">Export JSON</button>
-    <label class="btn btn-ghost" style="position:relative;overflow:hidden">
+    <button id="exportProject" class="btn">Export JSON</button>
+    <label class="btn" style="position:relative;overflow:hidden">
       Import
-      <input id="importProject" type="file" accept="application/json" style="position:absolute;inset:0;opacity:0;">
+      <input id="importProject" type="file" accept="application/json" style="position:absolute;inset:0;opacity:0">
     </label>
-    <button id="deleteProject" class="btn btn-danger">Delete</button>
+    <button id="deleteProject" class="btn">Delete</button>
   </div>
 
   <div id="projectsList" class="projects-list"></div>
 </aside>
 
-<!-- Full-screen Editor -->
+<!-- Full-screen Editor overlay -->
 <div id="editorOverlay" class="hidden" aria-hidden="true">
   <div class="editor-toolbar">
-    <button id="toolEyedrop" class="btn btn-ghost">Eyedrop</button>
-    <button id="toolLasso" class="btn btn-ghost">Lasso</button>
-    <button id="toolPan" class="btn btn-ghost">Pan</button>
+    <button id="toolEyedrop" class="btn">Eyedrop</button>
+    <button id="toolLasso" class="btn">Lasso</button>
+    <button id="toolPan" class="btn">Pan</button>
     <div class="grow"></div>
     <div class="row">
-      <span id="eyeSwatch" class="sw" style="width:20px;height:20px;border-radius:4px;border:1px solid var(--sw-outline)"></span>
+      <span id="eyeSwatch" class="sw" style="width:20px;height:20px;border-radius:4px;border:1px solid #334155"></span>
       <span id="eyeHex" class="mono">#000000</span>
       <button id="eyeAdd" class="btn">Add to palette</button>
-      <button id="eyeCancel" class="btn btn-ghost">Clear mark</button>
+      <button id="eyeCancel" class="btn">Clear mark</button>
     </div>
     <button id="editorDone" class="btn">Done</button>
   </div>
@@ -267,52 +261,18 @@
     <div id="lassoChecks" class="chips"></div>
     <div class="row" style="margin-top:8px">
       <button id="lassoSave" class="btn" disabled>Save region</button>
-      <button id="lassoClear" class="btn btn-ghost" disabled>Clear</button>
+      <button id="lassoClear" class="btn" disabled>Clear</button>
     </div>
   </div>
 </div>
 
 <div id="toasts"></div>
 
-<!-- Your JS bundle -->
-<script defer src="./app.js?v=3"></script>
+<!-- JS entrypoint — ES module so it can import the rest of your js/** files -->
+<script type="module" src="js/app.js"></script>
 
-<!-- CSS load detector + fallback paths (helps with wrong path/caching on GH Pages) -->
-<script>
-(function ensureCSS(){
-  // If styles.css defines --bg, it should not be empty. If empty, CSS missed.
-  function cssLoaded(){
-    return getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() !== '';
-  }
-  function addLink(href){
-    const link = document.createElement('link');
-    link.rel = 'stylesheet'; link.href = href;
-    document.head.appendChild(link);
-    return link;
-  }
-  function showWarn(){ document.getElementById('cssWarning').style.display='block'; }
-
-  if (cssLoaded()) return;
-
-  // Try alternate hrefs in case of path issues
-  const tries = [
-    './styles.css?v=' + Date.now(),
-    '/styles.css?v=' + Date.now(),          // site root (GitHub Pages root)
-    'styles.css?v=' + Date.now()
-  ];
-
-  let i = 0;
-  (function tryNext(){
-    if (i >= tries.length) { showWarn(); return; }
-    const href = tries[i++];
-    const l = addLink(href);
-    // give the browser a moment, then check the var again
-    setTimeout(()=> cssLoaded() ? 0 : tryNext(), 150);
-  })();
-})();
-</script>
-
-<!-- Optional: ImageTracer for SVG export -->
-<!-- <script defer src="imagetracer_v1.2.6.min.js"></script> -->
+<!-- Optional: If you actually ship ImageTracer as a plain script file in /lib,
+     you can uncomment the next line so SVG export works.
+     <script src="lib/imagetracer_v1.2.6.min.js"></script> -->
 </body>
 </html>
