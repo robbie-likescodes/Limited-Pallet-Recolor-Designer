@@ -1,1 +1,25 @@
+[
+  { "name": "PMS 100 C", "hex": "#F6EB61" },
+  { "name": "PMS 101 C", "hex": "#F7EA48" },
+  { "name": "PMS 102 C", "hex": "#FCE300" },
+  { "name": "PMS 103 C", "hex": "#C5A900" },
+  { "name": "PMS 104 C", "hex": "#AF9800" },
+  { "name": "PMS 105 C", "hex": "#897A27" },
+
+  { "name": "PMS 186 C", "hex": "#E4002B" },
+  { "name": "PMS 187 C", "hex": "#A6192E" },
+  { "name": "PMS 188 C", "hex": "#76232F" },
+
+  { "name": "PMS 300 C", "hex": "#005EB8" },
+  { "name": "PMS 301 C", "hex": "#004B87" },
+  { "name": "PMS 302 C", "hex": "#003B5C" },
+
+  { "name": "PMS 347 C", "hex": "#009A44" },
+  { "name": "PMS 348 C", "hex": "#007A33" },
+  { "name": "PMS 349 C", "hex": "#046A38" },
+
+  { "name": "PMS 7540 C", "hex": "#3D3935" },
+  { "name": "PMS 7541 C", "hex": "#D9E1E2" },
+  { "name": "PMS 7542 C", "hex": "#A7C6ED" }
+]
 
