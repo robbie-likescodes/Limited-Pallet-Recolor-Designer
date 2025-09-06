@@ -1,25 +1,19 @@
 // imagetracer-loader.js
-// Ensures ImageTracer is loaded from your GitHub Pages fork before use
-
-async function loadScript(url) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = url;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error('Failed to load ' + url));
-    document.head.appendChild(s);
-  });
-}
-
-// Replace with the exact URL from your GitHub Pages
-const IMAGETRACER_URL = "https://robbie-likescodes.github.io/imagetracerjs/imagetracer_v1.2.6.js";
+// Loads your forked ImageTracer from GitHub Pages on demand.
+// Replace the URL below only if your repo or path changes.
 
 export async function ensureImageTracerLoaded() {
-  if (window.ImageTracer) return; // Already loaded
-  await loadScript(IMAGETRACER_URL);
+  if (window.ImageTracer && typeof window.ImageTracer.imageToSVG === 'function') return;
 
-  if (!window.ImageTracer) {
-    throw new Error("ImageTracer failed to load from " + IMAGETRACER_URL);
-  }
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://robbie-likescodes.github.io/imagetracerjs/imagetracer_v1.2.6.js';
+    s.async = true;
+    s.onload = () => {
+      if (window.ImageTracer) resolve();
+      else reject(new Error('ImageTracer loaded but not found on window.'));
+    };
+    s.onerror = () => reject(new Error('Failed to load imagetracer_v1.2.6.js from GitHub Pages.'));
+    document.head.appendChild(s);
+  });
 }
