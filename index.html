@@ -108,16 +108,16 @@
     </div>
 
     <div class="row">
-      <button id="rpSelectAll" type="button" class="ghost">Select all</button>
-      <button id="rpSelectNone" type="button" class="ghost">Select none</button>
+      <button id="restrictedSelectAll" type="button" class="ghost">Select all</button>
+      <button id="restrictedSelectNone" type="button" class="ghost">Select none</button>
       <label class="check">
-        <input id="rpAllowWhite" type="checkbox" checked />
+        <input id="allowWhite" type="checkbox" checked />
         Allow White mixing
       </label>
     </div>
 
-    <!-- Built from the current palette: checkbox + swatch + HEX + PMS tag -->
-    <div id="rpList" class="palette-list"></div>
+    <!-- Built from the current palette: checkbox + swatch + HEX -->
+    <div id="restrictedList" class="palette-list"></div>
   </section>
 
   <!-- 4) Texture / Replacement (one color → pattern of inks) -->
@@ -130,14 +130,14 @@
 
     <div class="row">
       <button id="btnSuggestHueLuma" type="button" class="ghost">Suggest by Hue &amp; Luma</button>
-      <button id="btnAddReplacement" type="button">+ Add replacement</button>
+      <button id="btnSmartMix" type="button" class="ghost">Smart Mix (target → mix)</button>
+      <button id="addRule" type="button">+ Add replacement</button>
       <label>Default pattern
         <select id="texPattern">
           <option value="checker">Checker</option>
           <option value="ordered">Ordered (Bayer)</option>
           <option value="stripe">Stripe</option>
           <option value="dots">Dots</option>
-          <option value="stipple">Stipple</option>
         </select>
       </label>
     </div>
@@ -145,16 +145,16 @@
     <div class="panel" id="replacementRules">
       <div class="panel-head">Replacement Rules</div>
       <div class="tiny-help">
-        Priority is top-down. “Inks” are chosen from the Restricted Palette; two-ink rules use a density slider, 3–4 ink rules expose editable weights.
+        Priority is top-down. “Inks” are chosen from the Restricted Palette; densities may be luminance-adaptive.
       </div>
-      <table class="rules-table">
+      <table class="rules-table" id="rulesTable">
         <thead>
           <tr>
             <th>On</th>
             <th>Target</th>
             <th>Inks</th>
             <th>Pattern</th>
-            <th>Density / Weights</th>
+            <th>Density</th>
             <th>Edit</th>
             <th>Del</th>
           </tr>
@@ -206,7 +206,7 @@
     <div class="row">
       <button id="applyBtn" type="button" disabled>Apply mapping</button>
       <button id="downloadBtn" type="button" disabled>Download PNG</button>
-      <button id="btnExportSVG" type="button" class="ghost" disabled>Download SVG (mapped)</button>
+      <button id="vectorExport" type="button" class="ghost" disabled>Download SVG (mapped)</button>
     </div>
   </section>
 
@@ -244,7 +244,6 @@
   <section class="card" id="sec-output">
     <div class="row" style="justify-content:space-between;align-items:center">
       <h2 style="margin:0">Mapped</h2>
-      <!-- IMPORTANT: id changed to match app.js -->
       <button id="bigRegen" type="button" class="ghost">Regenerate Mapping</button>
     </div>
     <canvas id="outCanvas"></canvas>
@@ -321,11 +320,11 @@
     </aside>
   </div>
 
-  <!-- Toast host (for in-app guidance) -->
-  <div id="toastHost" aria-live="polite" aria-atomic="true"></div>
+  <!-- Optional: pre-create toast host (toast() will create if missing) -->
+  <div id="toasts" style="position:fixed;left:50%;bottom:20px;transform:translateX(-50%);display:grid;gap:8px;z-index:99999"></div>
 
   <!-- Scripts (module) -->
-  <!-- Optional vector + ImageTracer loader before app; order allows app.js to detect globals if needed -->
+  <!-- Optional vector + ImageTracer loader before app; order lets app detect globals -->
   <script type="module" src="./js/vector.js?v=20250905" defer></script>
   <script type="module" src="./js/imagetracer-loader.js?v=20250905" defer></script>
   <script type="module" src="./js/app.js?v=20250905" defer></script>
