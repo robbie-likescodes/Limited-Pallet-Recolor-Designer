@@ -1,19 +1,7 @@
-/* Palette Mapper — Comprehensive app.js (all-in-one)
-   Features:
-   - Robust image load (file/camera/paste/drag), EXIF orientation
-   - Auto-palette (hybrid histogram + K-means)
-   - Palette UI: add/remove/save/load/example + per-color tolerance sliders
-   - Restricted Palette (select final inks) w/ preview chips
-   - Manual replacements: target -> pattern(2-4 inks) + density + pattern type
-   - Suggest by Hue & Luma (auto rules)
-   - Smart Mix (pick allowed inks; solver suggests best combos for target colors)
-   - Lab mapping + dithering + per-color tolerance + (optional) halftone
-   - High-res export PNG (1x/2x/4x) + Sharpen Text Edges
-   - SVG export via ImageTracer (if present) with same palette + rules
-   - PMS report for FINAL restricted palette
-   - Full-screen editor (eyedropper add / lasso region mask)
-   - Projects (IndexedDB): save/load/export/import/delete
-   - Toaster tips for odd tools (Lasso/SmartMix)
+/* Palette Mapper — Comprehensive app.js (HEIC-capable)
+   - Robust image load: file/camera/paste/drag (HEIC native / optional heic2any)
+   - EXIF orientation (JPEG) or browser-applied orientation (ImageBitmap)
+   - All your existing features preserved (palettes, rules, halftone, exports, projects, etc.)
 */
 
 /* -------------------------- DOM Helpers -------------------------- */
@@ -196,17 +184,25 @@ function drawImageWithOrientation(ctx, img, targetW, targetH, orientation){
 
 /* -------------------------- HEIC/EXIF helpers -------------------------- */
 function isHeicFile(file){
-  const name=(file.name||'').toLowerCase(); const type=(file.type||'').toLowerCase();
-  return name.endsWith('.heic')||name.endsWith('.heif')||type.includes('heic')||type.includes('heif');
+  const name=(file?.name||'').toLowerCase();
+  const type=(file?.type||'').toLowerCase();
+  return name.endsWith('.heic') || name.endsWith('.heif') || type.includes('heic') || type.includes('heif');
 }
-function heicMsg(){
-  alert(`This photo appears to be HEIC/HEIF, which this browser can't decode into canvas.\nUse a JPG/PNG, or on iPhone set: Settings → Camera → Formats → “Most Compatible”.`);
+function heicUnsupportedMsg(){
+  alert(
+`This photo is HEIC/HEIF and your browser can't decode it directly.
+
+Options:
+• If you're on iPhone: Settings → Camera → Formats → “Most Compatible” (shoots JPG).
+• Or export/share as JPG/PNG from Photos.
+• Or add a HEIC decoder script (e.g. heic2any) to this page for automatic conversion.`
+  );
 }
 function isLikelyJpeg(file){
   const t=(file.type||'').toLowerCase(); const ext=(file.name||'').split('.').pop().toLowerCase();
   return t.includes('jpeg')||t.includes('jpg')||ext==='jpeg'||ext==='jpg';
 }
-// minimal EXIF orientation read (JPEG)
+// minimal EXIF orientation read (JPEG only)
 async function readJpegOrientation(file){
   return new Promise(res=>{
     const r=new FileReader();
@@ -321,10 +317,9 @@ function getRestrictedInkIndices(){
 }
 
 /* -------------------------- Auto Palette (Hybrid) -------------------------- */
-// single-pass sampler (faster & more robust than row-by-row)
 function sampleForClusteringFast(ctx, w, h, targetPixels = 120000) {
   const step = Math.max(1, Math.floor(Math.sqrt((w * h) / targetPixels)));
-  const data = ctx.getImageData(0, 0, w, h).data; // one read
+  const data = ctx.getImageData(0, 0, w, h).data; // single read
   const out = new Uint8ClampedArray(((Math.floor(h/step)+1) * (Math.floor(w/step)+1)) * 4);
   let si = 0;
   for (let y = 0; y < h; y += step) {
@@ -370,7 +365,6 @@ function autoPaletteFromCanvasHybrid(canvas, k=10){
   if(!canvas || !canvas.width) { console.warn('autoPalette: no canvas yet'); return; }
   const ctx=canvas.getContext('2d',{willReadFrequently:true});
   const w=canvas.width,h=canvas.height;
-  // simple histogram (5-bit) is kept if needed later; KMeans uses fast sample
   const sampled = sampleForClusteringFast(ctx,w,h, 120000);
   const kk = Math.min(16, Math.max(2, (k|0)));
   const centers = kmeans(sampled, kk, 10);
@@ -385,32 +379,103 @@ function loadIMG(url){
     const img=new Image(); img.decoding='async'; img.onload=()=>res(img); img.onerror=rej; img.src=url;
   });
 }
-async function handleFile(file){
-  try{
-    if(!file) return;
-    if(isHeicFile(file)) { heicMsg(); return; }
-    state.exifOrientation=1;
 
-    if(typeof createImageBitmap==='function'){
+/** Try converting HEIC→JPEG if a global converter is available (heic2any or compatible). */
+async function maybeConvertHeicToJpeg(file){
+  if(!isHeicFile(file)) return file;
+  const any = (window.heic2any || window.HEIC2ANY || window.HEIC || null);
+  if(!any) return file; // no converter present
+  try{
+    // heic2any signature: heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 })
+    const out = await any({ blob:file, toType:'image/jpeg', quality:0.92 });
+    const blob = Array.isArray(out) ? out[0] : out;
+    return new File([blob], (file.name||'image').replace(/\.\w+$/i,'.jpg'), { type:'image/jpeg' });
+  }catch(e){
+    console.warn('HEIC convert failed, continuing without conversion', e);
+    return file;
+  }
+}
+
+async function handleFile(origFile){
+  try{
+    if(!origFile) return;
+
+    // If HEIC, try native decode first; if that fails and a converter exists, convert to JPEG and continue
+    let file = origFile;
+
+    // Fast path: browsers that can decode (esp. Safari/iOS) via ImageBitmap
+    state.exifOrientation = 1;
+    if(typeof createImageBitmap === 'function'){
       try{
         const bmp=await createImageBitmap(file,{ imageOrientation:"from-image" });
-        state.fullBitmap=bmp; state.fullW=bmp.width; state.fullH=bmp.height; state.exifOrientation=1;
+        state.fullBitmap=bmp; state.fullW=bmp.width; state.fullH=bmp.height; state.exifOrientation=1; // orientation already applied
         drawPreviewFromState(); toggleImageActions(true); return;
-      }catch(e){ console.warn('createImageBitmap failed',e); }
+      }catch(e){
+        // If HEIC and native failed, attempt conversion if decoder is present
+        if(isHeicFile(file)){
+          const converted = await maybeConvertHeicToJpeg(file);
+          if(converted !== file){
+            file = converted;
+            // Try ImageBitmap again after conversion
+            try{
+              const bmp2=await createImageBitmap(file,{ imageOrientation:"from-image" });
+              state.fullBitmap=bmp2; state.fullW=bmp2.width; state.fullH=bmp2.height; state.exifOrientation=1;
+              drawPreviewFromState(); toggleImageActions(true); return;
+            }catch(e2){ /* fall through to <img> */ }
+          }
+        }
+      }
     }
 
-    const url=objectUrlFor(file);
+    // Fallback: use <img>. Works for JPG/PNG everywhere, and HEIC on Safari/iOS (native decoder).
+    let url=objectUrlFor(file);
     try{
       const img=await loadIMG(url);
       state.fullBitmap=img;
       state.fullW=img.naturalWidth||img.width; state.fullH=img.naturalHeight||img.height;
+
       if(isLikelyJpeg(file)){
-        try{ state.exifOrientation=await readJpegOrientation(file); }catch{}
-      }else state.exifOrientation=1;
+        try{ state.exifOrientation=await readJpegOrientation(file); }catch{ state.exifOrientation=1; }
+      } else {
+        // For non-JPEG (including Safari's HEIC), assume the browser decoded with orientation applied
+        state.exifOrientation=1;
+      }
+
       drawPreviewFromState(); toggleImageActions(true);
-    }finally{ revokeUrl(url); }
-  }catch(err){ console.error(err); alert('Could not open that image. Try a JPG/PNG.'); }
+    }catch(loadErr){
+      // If HEIC failed here, last attempt: convert (if available) then reload
+      if(isHeicFile(file)){
+        const converted = await maybeConvertHeicToJpeg(file);
+        if(converted !== file){
+          revokeUrl(url);
+          url = objectUrlFor(converted);
+          try{
+            const img2=await loadIMG(url);
+            state.fullBitmap=img2;
+            state.fullW=img2.naturalWidth||img2.width; state.fullH=img2.naturalHeight||img2.height;
+            state.exifOrientation = await readJpegOrientation(converted).catch(()=>1) || 1;
+            drawPreviewFromState(); toggleImageActions(true);
+            return;
+          }catch(finalErr){
+            console.error('Converted JPEG still failed to load', finalErr);
+            heicUnsupportedMsg();
+          }
+        } else {
+          heicUnsupportedMsg();
+        }
+      } else {
+        console.error(loadErr);
+        alert('Could not open that image. Try a JPG/PNG.');
+      }
+    } finally {
+      revokeUrl(url);
+    }
+  }catch(err){
+    console.error(err);
+    alert('Could not open that image.');
+  }
 }
+
 function drawPreviewFromState(){
   if(!els.srcCanvas || !state.fullBitmap) return;
   let w=state.fullW, h=state.fullH;
