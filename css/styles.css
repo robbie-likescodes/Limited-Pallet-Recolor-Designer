@@ -1,4 +1,4 @@
-/* ========== Theme ========== */
+/* ================= Theme ================= */
 :root{
   --bg:#0f172a;
   --card:#0b1225;
@@ -7,9 +7,9 @@
   --muted:#9fb0c7;
   --line:#1e293b;
 
-  --brand:#2563eb;        /* primary */
+  --brand:#2563eb;
   --brand-ink:#ffffff;
-  --ghost:#16223d;        /* ghost button */
+  --ghost:#16223d;
   --ghost-ink:#dbeafe;
   --danger:#b91c1c;
 
@@ -26,7 +26,7 @@
   --radius:12px;
 }
 
-/* ========== Base ========== */
+/* ================= Base ================= */
 *{ box-sizing:border-box; }
 html,body{ height:100%; margin:0; }
 body{
@@ -34,13 +34,14 @@ body{
   color:var(--ink);
   font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial,sans-serif;
 }
+.hidden{ display:none !important; }
 
 /* Scrollbar (desktop) */
 *::-webkit-scrollbar{ width:10px; height:10px; }
 *::-webkit-scrollbar-thumb{ background:#1b2640; border-radius:999px; }
 *::-webkit-scrollbar-track{ background:transparent; }
 
-/* ========== Header ========== */
+/* ================= Header ================= */
 header{
   display:flex; align-items:center; justify-content:space-between;
   padding:12px 16px;
@@ -51,7 +52,7 @@ header{
 header h1{ margin:0; font-size:18px; font-weight:700; }
 header p{ margin:.125rem 0 0; color:var(--muted); font-size:12px; }
 
-/* ========== Layout blocks ========== */
+/* ================= Layout blocks ================= */
 .card{
   background:var(--card);
   border:1px solid var(--line);
@@ -60,7 +61,13 @@ header p{ margin:.125rem 0 0; color:var(--muted); font-size:12px; }
   padding:16px;
 }
 .card h2{ margin:0 0 10px; font-size:16px; }
-.panel{ border:1px solid var(--line); border-radius:10px; background:var(--panel); margin-top:10px; }
+
+.panel{
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--panel);
+  margin-top:10px;
+}
 .panel-head{ background:#112042; color:#dbeafe; padding:8px 10px; font-weight:700; }
 
 .row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
@@ -68,25 +75,60 @@ header p{ margin:.125rem 0 0; color:var(--muted); font-size:12px; }
 .help,.tiny-help{ color:var(--muted); font-size:12px; }
 .mono{ font-family:ui-monospace,Menlo,Consolas,monospace; }
 
-/* ========== Inputs & Buttons ========== */
-input[type="number"], input[type="text"], select{
-  padding:8px 10px; border-radius:10px; border:1px solid var(--line);
-  background:#0b1326; color:var(--ink); outline:none;
-}
-input[type="color"]{ background:transparent; border:none; width:36px; height:28px; }
+/* ================= Inputs & Buttons ================= */
+label.check{ display:inline-flex; align-items:center; gap:8px; }
 
-/* Buttons (match HTML/JS classes) */
+input[type="number"], input[type="text"], select{
+  padding:8px 10px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:#0b1326;
+  color:var(--ink);
+  outline:none;
+  min-height:34px;
+}
+
+/* Range — visible on iOS & desktop */
+input[type="range"]{
+  width:180px;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+}
+input[type="range"]::-webkit-slider-runnable-track{
+  height:4px; background:#2a3757; border-radius:999px;
+}
+input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none;
+  width:16px; height:16px; border-radius:50%;
+  background:var(--brand); border:2px solid #0b1020; margin-top:-6px;
+}
+input[type="range"]::-moz-range-track{ height:4px; background:#2a3757; border-radius:999px; }
+input[type="range"]::-moz-range-thumb{
+  width:16px; height:16px; border:none; border-radius:50%; background:var(--brand);
+}
+input[type="color"]{
+  background:transparent; border:none; width:36px; height:28px; padding:0;
+  cursor:pointer;
+  border-radius:6px;
+}
+
 button{
-  padding:9px 12px; border-radius:10px; border:0; font-weight:700; cursor:pointer;
-  background:var(--brand); color:var(--brand-ink);
+  padding:9px 12px;
+  border-radius:10px;
+  border:0;
+  font-weight:700;
+  cursor:pointer;
+  background:var(--brand);
+  color:var(--brand-ink);
 }
 button.ghost{ background:var(--ghost); color:var(--ghost-ink); }
 button.danger{ background:var(--danger); color:#fff; }
 button:disabled{ opacity:.5; cursor:not-allowed; }
-.filelike{ position:relative; display:inline-flex; align-items:center; gap:8px; }
-.filelike input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+label.filelike{ position:relative; display:inline-flex; align-items:center; gap:8px; }
+label.filelike input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
 
-/* Chip-like groupings */
+/* Chips */
 .chips{ display:flex; flex-wrap:wrap; gap:8px; }
 .chip{
   display:inline-flex; align-items:center; gap:8px;
@@ -95,7 +137,7 @@ button:disabled{ opacity:.5; cursor:not-allowed; }
   padding:6px 10px; border-radius:999px; font-size:12px;
 }
 
-/* ========== Canvas ========== */
+/* ================= Canvas ================= */
 canvas{
   display:block; width:100%; height:auto;
   background:var(--canvas);
@@ -103,72 +145,84 @@ canvas{
   border-radius:10px;
 }
 
-/* ========== Palette (Section 2) ========== */
+/* ================= Palette (Section 2) ================= */
 #paletteList{ display:grid; gap:8px; margin-bottom:10px; }
 
 .palette-item{
   display:grid;
-  grid-template-columns: auto 120px minmax(140px,1fr) auto auto; /* [color] [hex] [Tol + slider] [value] [remove] */
+  grid-template-columns: auto 140px 1fr auto auto;
   gap:10px; align-items:center;
-  padding:8px; border:1px solid var(--line); border-radius:10px; background:#0a132a;
+  padding:8px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#0a132a;
 }
+.palette-item .col{ width:36px; height:28px; }
+.palette-item .hex{ width:110px; }
+.palette-item label.mono{ display:flex; align-items:center; gap:8px; }
+.palette-item .tol{ width:160px; }
+.palette-item .tolv{ min-width:32px; text-align:right; opacity:.9; }
+.palette-item .remove{ justify-self:end; }
 
-/* inputs inside palette rows */
-.palette-item input.col{ width:36px; height:28px; padding:0; border:none; background:transparent; }
-.palette-item input.hex{ width:120px; }
-.palette-item label.mono{ display:inline-flex; align-items:center; gap:8px; }
-.palette-item .tol{ width:200px; max-width:52vw; }
-.palette-item .tolv{ min-width:32px; text-align:right; color:#cfe0ff; }
-.palette-item button.remove{ justify-self:end; }
+/* Optional grid preview (if you add it) */
+#palettePreview{
+  display:grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr));
+  gap:10px; margin-top:10px;
+}
+.pp-cell{ border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#0a132a; }
+.pp-swatch{ height:64px; border-bottom:1px solid var(--line); }
+.pp-meta{ padding:6px 8px; font-size:12px; display:flex; align-items:center; justify-content:space-between; }
+.pp-meta .tag{ background:#0b1834; border:1px solid #22304e; color:#cfe0ff; padding:2px 6px; border-radius:999px; font-size:11px; }
 
-/* Range slider – explicit iOS-friendly styling */
-input[type="range"]{
-  -webkit-appearance: none; appearance: none;
-  height: 2px; background: var(--sl-track,#3a4154);
-  border-radius: 2px; display:inline-block;
-}
-input[type="range"]::-webkit-slider-thumb{
-  -webkit-appearance: none;
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--sl-thumb,#9aa4bf); border: 0;
-}
-input[type="range"]::-moz-range-thumb{
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--sl-thumb,#9aa4bf); border: 0;
-}
-
-/* ========== Restricted Palette (Section 3) ========== */
-/* Updated IDs to match app.js */
+/* ================= Restricted Palette (Section 3½) ================= */
 #restrictedList{ display:grid; gap:8px; }
 #restrictedList .rp-item{
   display:inline-flex; align-items:center; gap:10px;
-  border:1px solid var(--line); background:#0a1327;
-  padding:6px 10px; border-radius:10px;
+  border:1px solid var(--line);
+  background:#0a1327;
+  padding:8px 10px; border-radius:10px;
 }
-#restrictedList .rp-item .chip{
-  width:20px; height:20px; border-radius:4px; border:1px solid var(--sw-outline);
-  display:inline-block; padding:0; background:transparent;
+#restrictedList .rp-item input{ transform:translateY(1px); }
+#restrictedList .chip{
+  width:20px; height:20px;
+  display:inline-block; border-radius:4px;
+  border:1px solid var(--sw-outline); padding:0;
 }
-#restrictedList .rp-item input[type="checkbox"]{ transform: translateY(1px); }
 
-/* ========== Mapping (weights etc.) ========== */
+/* ================= Rules / Replacement (Section 4) ================= */
+.rules-table{
+  width:100%; border-collapse:separate; border-spacing:0;
+  border:1px solid var(--line); border-radius:10px; overflow:hidden;
+}
+.rules-table thead th{
+  background:#0e1a33; color:#cfe0ff;
+  text-align:left; font-weight:700; padding:8px 10px; font-size:12px;
+  border-bottom:1px solid var(--line);
+}
+.rules-table tbody td{
+  padding:8px 10px; vertical-align:middle; border-bottom:1px solid #12203b;
+}
+.rules-table tbody tr:last-child td{ border-bottom:none; }
+
+.r-inks{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.inkchip{ display:inline-flex; align-items:center; gap:6px; }
+.inkchip .chip{ width:18px; height:18px; border-radius:4px; padding:0; display:inline-block; border:1px solid var(--sw-outline); }
+
+/* ================= Mapping (weights etc.) ================= */
 #weightsRow label{ display:flex; flex-direction:column; gap:4px; min-width:220px; }
 #weightsRow .mono{ font-size:12px; color:#cfe0ff; }
 
-/* ========== Rules table (textures) ========== */
-.rules-table{ width:100%; border-collapse:collapse; font-size:13px; }
-.rules-table th, .rules-table td{ border-top:1px solid var(--line); padding:6px 8px; }
-.rules-table thead th{ border-top:0; color:#cfe0ff; text-align:left; }
-.rules-table .inkchip{ display:inline-flex; align-items:center; gap:6px; margin-right:6px; }
-.rules-table .chip{ width:16px; height:16px; border-radius:4px; border:1px solid var(--sw-outline); display:inline-block; }
-
-/* ========== Codes & Report (Section 5) ========== */
-.code-list{ margin-top:.5rem; font-size:.95rem; line-height:1.6; display:grid; gap:6px; }
+/* ================= Codes & Report (Section 8) ================= */
+.code-list{
+  margin-top:.5rem; font-size:.95rem; line-height:1.6; display:grid; gap:6px;
+}
 .code-list .row{ display:flex; align-items:center; gap:.5rem; }
 .code-list .sw{ width:14px; height:14px; border:1px solid var(--sw-outline); border-radius:3px; display:inline-block; }
-.report-footer{ margin-top:10px; padding:8px; border:1px dashed var(--line); border-radius:10px; background:#0a142b; color:var(--muted); }
+.report-footer{
+  margin-top:10px; padding:8px; border:1px dashed var(--line); border-radius:10px; background:#0a142b; color:var(--muted);
+}
 
-/* ========== Projects Drawer ========== */
+/* ================= Projects Drawer ================= */
 .projects{
   position:fixed; top:0; right:-380px; width:360px; bottom:0;
   background:var(--card); border-left:1px solid var(--line);
@@ -184,16 +238,17 @@ input[type="range"]::-moz-range-thumb{
 }
 .projects-list .item.selected{ outline:2px solid #3b82f6; }
 
-/* ========== Full-screen Editor ========== */
-#editorOverlay{ position:fixed; inset:0; z-index:9999; background:rgba(3,6,20,.96); display:none; }
-#editorOverlay.show{ display:block; }
-
+/* ================= Full-screen Editor ================= */
+#editorOverlay{
+  position:fixed; inset:0; z-index:9999;
+  background:rgba(3,6,20,.96);
+}
 .editor-toolbar{
   position:absolute; top:0; left:0; right:0; height:44px;
   display:flex; gap:8px; align-items:center; padding:6px;
   background:#08112a; border-bottom:1px solid var(--line);
 }
-.editor-toolbar .btn.active, .editor-toolbar button.active{ background:var(--accent); color:#07223b; }
+.editor-toolbar button.active{ background:var(--accent); color:#07223b; }
 #editCanvas,#editOverlay{
   position:absolute; left:0; right:320px; top:44px; bottom:0;
   width:calc(100% - 320px); height:calc(100% - 44px);
@@ -206,31 +261,30 @@ input[type="range"]::-moz-range-thumb{
 }
 .editor-right h3{ margin:8px 0 6px; }
 .editor-right .sw{ width:20px; height:20px; border:1px solid var(--sw-outline); border-radius:4px; display:inline-block; }
+.lasso-ink{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
 
-/* ========== Toasts ========== */
+/* ================= Toasts ================= */
 #toasts{
   position:fixed; left:50%; transform:translateX(-50%);
   bottom:20px; display:grid; gap:8px; z-index:99999;
 }
-.toast{
+#toasts > div{
   background:#111826cc; border:1px solid #2a3243; color:#e8ecf3;
   padding:10px 12px; border-radius:10px; backdrop-filter:blur(8px);
 }
 
-/* ========== Utility / Small bits ========== */
+/* ================= Utilities ================= */
 .kv{ display:flex; align-items:center; gap:8px; }
 .kv .key{ color:#c8d4ea; font-size:12px; }
 .kv .val{ font-family:ui-monospace,Menlo,Consolas,monospace; }
-
 .inline-swatches{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
 .inline-swatches .sw{ width:16px; height:16px; border-radius:4px; border:1px solid var(--sw-outline); }
 
-/* ========== Responsive ========== */
+/* ================= Responsive ================= */
 @media (max-width: 1024px){
   .palette-item{
     grid-template-columns: auto 110px 1fr auto auto;
   }
-  .palette-item .tol{ max-width:44vw; }
 }
 @media (max-width:900px){
   #editCanvas,#editOverlay{ right:0; width:100%; }
