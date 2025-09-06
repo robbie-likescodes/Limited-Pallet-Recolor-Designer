@@ -1,1 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Palette Mapper – Cup Print Helper</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>Palette Mapper</h1>
+      <p>Reduce photos to limited colors for printing · map, mix, and vectorize</p>
+    </div>
+    <div class="header-right">
+      <button id="openEditor" class="ghost" type="button" title="Full-screen editor">Open full-screen editor</button>
+    </div>
+  </header>
+
+  <!-- 1) Load image -->
+  <section class="card">
+    <h2>1) Load image</h2>
+    <div class="row">
+      <label class="filelike">Upload
+        <input id="fileInput" type="file" accept="image/*" />
+      </label>
+      <label class="filelike">Camera
+        <input id="cameraInput" type="file" accept="image/*" capture="environment" />
+      </label>
+      <button id="pasteBtn" type="button">Paste</button>
+      <button id="resetBtn" class="ghost" type="button">Reset</button>
+    </div>
+    <div class="help">“Upload” lets you choose from Photo Library or Camera on iOS. “Camera” forces the camera only.</div>
+    <div class="row">
+      <label>Max preview width (px) <input id="maxW" type="number" min="600" value="1400" /></label>
+      <label class="check"><input id="keepFullRes" type="checkbox" checked /> Process at full resolution</label>
+      <label class="check"><input id="sharpenEdges" type="checkbox" /> Sharpen text edges</label>
+    </div>
+    <div class="panel">
+      <div class="panel-head">Original (preview)</div>
+      <canvas id="srcCanvas"></canvas>
+      <div class="tiny-help">Long-press (mobile) or ALT-click (desktop) to eyedrop colors. Full-screen editor has eyedropper & lasso tools.</div>
+    </div>
+  </section>
+
+  <!-- 2) Palette (with per-color tolerances) -->
+  <section class="card">
+    <h2>2) Palette</h2>
+    <div id="paletteList" class="palette-list"></div>
+    <div class="row">
+      <button id="addColor" type="button">+ Add color</button>
+      <button id="clearColors" class="ghost" type="button">Clear</button>
+      <button id="loadExample" class="ghost" type="button">Load example</button>
+    </div>
+
+    <h3>Codes &amp; Report View</h3>
+    <div class="row">
+      <label>Chroma weight
+        <input id="wChroma" type="range" min="20" max="200" value="100" />
+        <span id="wChromaOut" class="mono"></span>
+      </label>
+      <label>Lightness weight
+        <input id="wLight" type="range" min="20" max="200" value="100" />
+        <span id="wLightOut" class="mono"></span>
+      </label>
+      <label>Background
+        <select id="bgMode">
+          <option value="keep">Keep original</option>
+          <option value="white">Force white</option>
+          <option value="transparent">Transparent</option>
+        </select>
+      </label>
+      <label class="check"><input id="useDither" type="checkbox" /> Floyd–Steinberg dither</label>
+    </div>
+    <div id="codeList" class="code-list"></div>
+  </section>
+
+  <!-- 3) Restricted Palette -->
+  <section class="card">
+    <h2>3) Restricted Palette (final inks to use)</h2>
+    <div class="row">
+      <button id="btnOpenRestricted" type="button">Choose inks from current palette</button>
+    </div>
+    <div id="restrictedPaletteList" class="restricted-list"></div>
+  </section>
+
+  <!-- 4) Suggestions & Manual Replacements -->
+  <section class="card">
+    <h2>4) Texture / Replacement (auto & manual)</h2>
+
+    <div class="panel">
+      <div class="panel-head">Auto — Suggest by Hue &amp; Luma</div>
+      <div class="row">
+        <button id="btnSuggest" type="button">Suggest by Hue &amp; Luma</button>
+      </div>
+      <div id="suggestList" class="mix-list"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Manual — Replace one color with pattern/mix</div>
+      <div class="row">
+        <label>Target color:
+          <select id="manualTarget"></select>
+        </label>
+        <button id="manualApply" class="ghost" type="button">Apply manual replacement</button>
+      </div>
+      <div id="manualMix" class="mix-manual"></div>
+    </div>
+  </section>
+
+  <!-- 5) Mapping & Exports -->
+  <section class="card">
+    <h2>5) Mapping &amp; Export</h2>
+    <div class="row">
+      <button id="btnRegenerate" type="button">Regenerate Mapping</button>
+      <button id="downloadBtn" class="ghost" type="button">Export PNG</button>
+      <button id="btnExportSVG" class="ghost" type="button">Export SVG</button>
+      <button id="exportReport" class="ghost" type="button">Export Final Inks Report</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Mapped</div>
+      <canvas id="outCanvas"></canvas>
+    </div>
+  </section>
+
+  <!-- Full-screen editor -->
+  <div id="editorOverlay" class="hidden" aria-hidden="true">
+    <div class="editor-toolbar">
+      <div class="tools">
+        <span class="label">Editor</span>
+      </div>
+      <div class="grow"></div>
+      <button id="editorDone">Done</button>
+    </div>
+    <canvas id="editCanvas"></canvas>
+    <canvas id="editOverlay"></canvas>
+
+    <aside class="editor-right">
+      <h3>Palette</h3>
+      <div class="editor-swatches" id="editorPalette"></div>
+
+      <h3>Eyedrop</h3>
+      <div class="row">
+        <span id="eyeSwatch" class="sw"></span>
+        <span id="eyeHex" class="mono">—</span>
+      </div>
+      <div class="row">
+        <button id="eyeAdd" type="button">Add to palette</button>
+        <button id="eyeCancel" class="ghost" type="button">Cancel</button>
+      </div>
+
+      <h3>Lasso (restrict inks in region)</h3>
+      <div id="lassoChecks" class="lasso-checks"></div>
+      <div class="row">
+        <button id="lassoSave" type="button" disabled>Save region</button>
+        <button id="lassoClear" class="ghost" type="button" disabled>Clear</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- App -->
+  <script type="module" src="./js/app.js"></script>
+
+  <!-- ImageTracer will be lazy-loaded by export when needed:
+       ./lib/imagetracer_v1.2.6.js -->
+</body>
+</html>
 
