@@ -3,11 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
-  <title>Palette Mapper – Limited Palette Recolor</title>
-  <!-- NOTE: index.html is inside /html, so we go up one level for css & js -->
-  <link rel="stylesheet" href="../css/styles.css" />
+  <title>Palette Mapper — Limited Palette Recolor</title>
+
+  <!-- CSS lives at /css/styles.css (root) -->
+  <link rel="stylesheet" href="./css/styles.css?v=1" />
+
+  <!-- Minimal inline fallback so the page isn't blank if CSS fails -->
+  <style>body{background:#0f172a;color:#e5e7eb;font:14px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}</style>
 </head>
 <body>
+  <!-- Your existing markup; keep IDs the same so JS can find them -->
   <header>
     <div class="header-left">
       <h1>Palette Mapper</h1>
@@ -18,75 +23,62 @@
     </div>
   </header>
 
-  <section class="card">
-    <h2>1) Load image</h2>
-    <div class="row">
-      <input id="fileInput" type="file" accept="image/*" />
-      <button id="pasteBtn" type="button">Paste</button>
-      <button id="resetBtn" type="button" disabled>Reset</button>
-    </div>
-    <div class="panel">
-      <div class="panel-head">Original</div>
-      <canvas id="srcCanvas"></canvas>
-      <div class="tiny-help">After an image loads, suggestions and restricted palette become available.</div>
-    </div>
-  </section>
+  <!-- Main content (same structure you had before) -->
+  <main id="app" class="container">
+    <!-- Keep your sections/cards/canvases etc. here exactly as before -->
+  </main>
 
-  <section class="card">
-    <h2>2) Working Palette (auto)</h2>
-    <div class="help">Detected from the image. “Restricted Palette” decides what inks are allowed.</div>
-    <div id="workingList" class="palette-list"></div>
-  </section>
+  <!-- Boot-status banner: will be hidden if app.js runs -->
+  <div id="bootstatus" style="position:fixed;left:8px;bottom:8px;background:#1f2937;color:#fff;padding:6px 10px;border-radius:6px;font:12px/1.2 ui-monospace,Menlo,Consolas,monospace;z-index:9999">
+    Loading scripts…
+  </div>
 
-  <section class="card" id="restrictedCard">
-    <h2>3) Restricted Palette (Final Inks)</h2>
-    <div class="row">
-      <button id="rpSelectAll" class="ghost" type="button">Select all</button>
-      <button id="rpSelectNone" class="ghost" type="button">Select none</button>
-      <label class="check"><input id="rpAllowWhite" type="checkbox" checked /> Allow White mixing</label>
-    </div>
-    <div id="restrictedList" class="restricted-list"></div>
-  </section>
+  <!-- 1) ImageTracer: choose ONE of these options -->
 
-  <section class="card" id="textureCard">
-    <h2>4) Texture / Replacement</h2>
-    <div class="row">
-      <button id="btnSuggestHueLuma" type="button" disabled>Suggest by Hue &amp; Luma</button>
-      <label>Pattern
-        <select id="texPattern">
-          <option value="checker">Checker</option>
-          <option value="ordered">Ordered</option>
-          <option value="stripe">Stripe</option>
-          <option value="dots">Dots</option>
-        </select>
-      </label>
-    </div>
-    <div id="replacementRules" class="rules"></div>
-  </section>
+  <!-- A) Use your fork hosted on GitHub Pages -->
+  <!-- Replace USER/REPO/PATH if different; keep this BEFORE app.js -->
+  <script src="https://robbie-likescodes.github.io/imagetracerjs/imagetracer_v1.2.6.js" defer></script>
 
-  <section class="card">
-    <h2>Mapped (preview)</h2>
-    <canvas id="outCanvas"></canvas>
-  </section>
+  <!-- B) Or load the local copy (if you placed it in /lib) -->
+  <!-- <script src="./lib/imagetracer_v1.2.6.js" defer></script> -->
 
-  <aside id="projectsPane" class="projects" aria-hidden="true">
-    <div class="projects-head">
-      <h3>Projects</h3>
-      <button id="closeProjects" class="ghost" type="button">Close</button>
-    </div>
-    <div class="projects-actions row">
-      <button id="saveProject" type="button">Save</button>
-      <button id="refreshProjects" class="ghost" type="button">Refresh</button>
-      <button id="exportProject" class="ghost" type="button">Export</button>
-      <label class="filelike">Import
-        <input id="importProject" type="file" accept="application/json" hidden />
-      </label>
-      <button id="deleteProject" class="ghost danger" type="button">Delete</button>
-    </div>
-    <div id="projectsList" class="projects-list"></div>
-  </aside>
+  <!-- 2) Optional vector helper (if you keep a local vector.js) -->
+  <!-- <script src="./lib/vector.js" defer></script> -->
 
-  <!-- NOTE: index.html is inside /html, so use ../js/app.js -->
-  <script type="module" src="../js/app.js"></script>
+  <!-- 3) Your module app. IMPORTANT: type="module" and a ROOT path -->
+  <script type="module">
+    // Give the app a tiny config for asset paths (used by app.js)
+    window.__APP_CONFIG__ = {
+      pmsUrl: './assets/pms_solid_coated.json',  // PMS JSON
+      tracerReady: () => typeof window.ImageTracer !== 'undefined'
+    };
+
+    // Load app.js from the repo root
+    import './app.js?v=1'
+      .then(() => {
+        const el = document.getElementById('bootstatus');
+        if (el) el.style.display = 'none';
+        console.log('[app] module loaded');
+      })
+      .catch(err => {
+        const el = document.getElementById('bootstatus');
+        if (el) {
+          el.textContent = 'Failed to load app.js — check path: ./app.js';
+          el.style.background = '#7f1d1d';
+        }
+        console.error('Failed to import app.js', err);
+      });
+  </script>
+
+  <!-- 4) Hard error catcher (helps surface silent module errors on iOS) -->
+  <script>
+    window.addEventListener('error', function(e){
+      const el = document.getElementById('bootstatus');
+      if (el) {
+        el.textContent = 'Runtime error: ' + (e.message || e.type);
+        el.style.background = '#7f1d1d';
+      }
+    });
+  </script>
 </body>
 </html>
