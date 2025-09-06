@@ -2,17 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
-  <title>Palette Mapper — Limited Palette Recolor</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Limited Palette Recolor Designer</title>
 
-  <!-- CSS lives at /css/styles.css (root) -->
-  <link rel="stylesheet" href="./css/styles.css?v=1" />
-
-  <!-- Minimal inline fallback so the page isn't blank if CSS fails -->
-  <style>body{background:#0f172a;color:#e5e7eb;font:14px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}</style>
+  <!-- Main stylesheet -->
+  <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
-  <!-- Your existing markup; keep IDs the same so JS can find them -->
+  <!-- Header -->
   <header>
     <div class="header-left">
       <h1>Palette Mapper</h1>
@@ -23,62 +20,36 @@
     </div>
   </header>
 
-  <!-- Main content (same structure you had before) -->
+  <!-- Main app container -->
   <main id="app" class="container">
-    <!-- Keep your sections/cards/canvases etc. here exactly as before -->
+    <!-- Your sections/cards/canvases remain here (Load Image, Palette, Mapping, etc.) -->
   </main>
 
-  <!-- Boot-status banner: will be hidden if app.js runs -->
+  <!-- Bootstatus overlay (hidden when app.js loads correctly) -->
   <div id="bootstatus" style="position:fixed;left:8px;bottom:8px;background:#1f2937;color:#fff;padding:6px 10px;border-radius:6px;font:12px/1.2 ui-monospace,Menlo,Consolas,monospace;z-index:9999">
-    Loading scripts…
+    Loading app…
   </div>
 
-  <!-- 1) ImageTracer: choose ONE of these options -->
-
-  <!-- A) Use your fork hosted on GitHub Pages -->
-  <!-- Replace USER/REPO/PATH if different; keep this BEFORE app.js -->
-  <script src="https://robbie-likescodes.github.io/imagetracerjs/imagetracer_v1.2.6.js" defer></script>
-
-  <!-- B) Or load the local copy (if you placed it in /lib) -->
-  <!-- <script src="./lib/imagetracer_v1.2.6.js" defer></script> -->
-
-  <!-- 2) Optional vector helper (if you keep a local vector.js) -->
-  <!-- <script src="./lib/vector.js" defer></script> -->
-
-  <!-- 3) Your module app. IMPORTANT: type="module" and a ROOT path -->
+  <!-- Entry point: your app -->
   <script type="module">
-    // Give the app a tiny config for asset paths (used by app.js)
-    window.__APP_CONFIG__ = {
-      pmsUrl: './assets/pms_solid_coated.json',  // PMS JSON
-      tracerReady: () => typeof window.ImageTracer !== 'undefined'
-    };
+    import './app.js';
 
-    // Load app.js from the repo root
-    import './app.js?v=1'
-      .then(() => {
-        const el = document.getElementById('bootstatus');
-        if (el) el.style.display = 'none';
-        console.log('[app] module loaded');
-      })
-      .catch(err => {
-        const el = document.getElementById('bootstatus');
-        if (el) {
-          el.textContent = 'Failed to load app.js — check path: ./app.js';
-          el.style.background = '#7f1d1d';
-        }
-        console.error('Failed to import app.js', err);
-      });
+    // Hide bootstatus if app loads
+    const boot = document.getElementById('bootstatus');
+    if (boot) boot.style.display = 'none';
   </script>
 
-  <!-- 4) Hard error catcher (helps surface silent module errors on iOS) -->
+  <!-- Catch runtime errors and show them in the bootstatus -->
   <script>
-    window.addEventListener('error', function(e){
+    window.addEventListener('error', function (e) {
       const el = document.getElementById('bootstatus');
       if (el) {
         el.textContent = 'Runtime error: ' + (e.message || e.type);
         el.style.background = '#7f1d1d';
+        el.style.display = 'block';
       }
     });
   </script>
 </body>
 </html>
+
