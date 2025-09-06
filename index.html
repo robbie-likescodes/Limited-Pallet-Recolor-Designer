@@ -137,6 +137,7 @@
           <option value="ordered">Ordered (Bayer)</option>
           <option value="stripe">Stripe</option>
           <option value="dots">Dots</option>
+          <option value="stipple">Stipple</option>
         </select>
       </label>
     </div>
@@ -144,7 +145,7 @@
     <div class="panel" id="replacementRules">
       <div class="panel-head">Replacement Rules</div>
       <div class="tiny-help">
-        Priority is top-down. “Inks” are chosen from the Restricted Palette; densities may be luminance-adaptive.
+        Priority is top-down. “Inks” are chosen from the Restricted Palette; two-ink rules use a density slider, 3–4 ink rules expose editable weights.
       </div>
       <table class="rules-table">
         <thead>
@@ -153,7 +154,7 @@
             <th>Target</th>
             <th>Inks</th>
             <th>Pattern</th>
-            <th>Density</th>
+            <th>Density / Weights</th>
             <th>Edit</th>
             <th>Del</th>
           </tr>
@@ -243,7 +244,8 @@
   <section class="card" id="sec-output">
     <div class="row" style="justify-content:space-between;align-items:center">
       <h2 style="margin:0">Mapped</h2>
-      <button id="btnRefreshOutputTop" type="button" class="ghost">Regenerate Mapping</button>
+      <!-- IMPORTANT: id changed to match app.js -->
+      <button id="bigRegen" type="button" class="ghost">Regenerate Mapping</button>
     </div>
     <canvas id="outCanvas"></canvas>
   </section>
