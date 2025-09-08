@@ -1,15 +1,8 @@
 /* =========================================================
    Limited Palette Designer — styles.css (full)
-   - Base reset & typography
-   - Layout containers
-   - Form controls & buttons
-   - Lists / mono labels
-   - Status / code blocks
-   - ColorDot component (editable color swatch + popover)
-   - Restricted Palette row layout
    ========================================================= */
 
-/* ------------------ CSS Reset (gentle) ------------------ */
+/* Reset */
 *,
 *::before,
 *::after { box-sizing: border-box; }
@@ -20,61 +13,38 @@ body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   font-size: 16px;
   line-height: 1.45;
-  color: #1f2937; /* slate-800 */
-  background: #f8fafc; /* slate-50 */
+  color: #1f2937;
+  background: #f8fafc;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ------------------ Root tokens ------------------ */
-:root{
+/* Root tokens */
+:root {
   --bg: #f8fafc;
   --panel: #ffffff;
-  --muted: #6b7280;   /* slate-500 */
-  --muted-2: #9ca3af; /* slate-400 */
-  --border: #e5e7eb;  /* gray-200 */
-  --accent: #2563eb;  /* blue-600 */
-  --accent-2: #3b82f6;/* blue-500 */
+  --muted: #6b7280;
+  --muted-2: #9ca3af;
+  --border: #e5e7eb;
+  --accent: #2563eb;
+  --accent-2: #3b82f6;
   --shadow: 0 10px 30px rgba(2, 6, 23, .08);
   --radius: 12px;
 
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-
-  /* Spacing scale */
-  --s-1: 4px;
-  --s-2: 8px;
-  --s-3: 12px;
-  --s-4: 16px;
-  --s-5: 20px;
-  --s-6: 24px;
-  --s-7: 28px;
-  --s-8: 32px;
 }
 
-/* ------------------ Layout ------------------ */
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 24px;
-}
+/* Layout */
+.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
 
 header.app-header {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 16px;
-  padding: 16px 0 8px;
+  gap: 16px; padding: 16px 0 8px;
 }
+header .title { font-weight: 700; font-size: 20px; }
 
-header .title {
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: 0.2px;
-}
-
-.main {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 24px;
-}
+.main { display: grid; grid-template-columns: 360px 1fr; gap: 24px; }
+@media (max-width: 900px) { .main { grid-template-columns: 1fr; } }
 
 /* Panels */
 .panel {
@@ -84,24 +54,15 @@ header .title {
   box-shadow: var(--shadow);
   overflow: hidden;
 }
-
 .panel .panel-head {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
   background: #fbfdff;
   font-weight: 600;
 }
-
 .panel .panel-body { padding: 16px; }
 
-/* Responsive */
-@media (max-width: 900px) {
-  .main { grid-template-columns: 1fr; }
-}
-
-/* ------------------ Form Controls ------------------ */
-label { color: #111827; }
-
+/* Form controls */
 input[type="text"],
 input[type="number"],
 input[type="search"],
@@ -116,17 +77,15 @@ select {
   outline: none;
   transition: box-shadow .15s ease, border-color .15s ease;
 }
-
 textarea { min-height: 120px; resize: vertical; }
-
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: #cbd5e1; /* slate-300 */
+  border-color: #cbd5e1;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
 }
 
-/* Range sliders */
+/* Range */
 input[type="range"] {
   width: 100%;
   margin: 6px 0;
@@ -136,8 +95,9 @@ input[type="range"]::-webkit-slider-runnable-track {
   height: 6px; border-radius: 5px; background: #e5e7eb;
 }
 input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 16px; height: 16px;
-  border-radius: 50%; background: var(--accent); border: none;
+  -webkit-appearance: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent); border: none;
   margin-top: -5px;
 }
 input[type="range"]::-moz-range-track {
@@ -148,14 +108,11 @@ input[type="range"]::-moz-range-thumb {
   background: var(--accent); border: none;
 }
 
-/* Checkboxes (keep native for reliability; spacing only) */
-input[type="checkbox"] {
-  width: 16px; height: 16px;
-  margin: 0;
-}
+/* Checkboxes */
+input[type="checkbox"] { width: 16px; height: 16px; margin: 0; }
 
-/* ------------------ Buttons ------------------ */
-.button, button, [role="button"] {
+/* Buttons */
+.button, button, [role="button"], .btn {
   display: inline-flex; align-items: center; justify-content: center;
   gap: 8px;
   padding: 10px 14px;
@@ -167,65 +124,45 @@ input[type="checkbox"] {
   user-select: none;
   transition: transform .05s ease, box-shadow .15s ease, background .15s ease;
 }
-button:hover { background: var(--accent-2); }
-button:active { transform: translateY(1px); }
-button.ghost {
-  background: #fff;
-  color: #111827;
-  border-color: var(--border);
+button:hover, .btn:hover { background: var(--accent-2); }
+button:active, .btn:active { transform: translateY(1px); }
+
+.btn-ghost {
+  background: #fff; color: #111827; border-color: var(--border);
 }
-button.ghost:hover { background: #f3f4f6; }
+.btn-ghost:hover { background: #f3f4f6; }
 
-/* Utility buttons by id (optional) */
-#btnSave { }
-#btnReset { }
-
-/* ------------------ Lists & labels ------------------ */
-.list {
-  display: flex; flex-direction: column; gap: 8px;
+.btn-danger {
+  background: #dc2626; border-color: transparent;
 }
+.btn-danger:hover { background: #ef4444; }
 
-.mono {
-  font-family: var(--mono);
-  letter-spacing: 0.2px;
-  color: #111827;
-  font-size: 13px;
+/* File picker label button */
+.picker { position: relative; }
+.picker input[type="file"] {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
 }
 
+/* Lists, labels, text */
+.list { display: flex; flex-direction: column; gap: 8px; }
+.mono { font-family: var(--mono); font-size: 13px; letter-spacing: 0.2px; }
 .small { font-size: 12px; color: var(--muted); }
+.help { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kv { display: inline-flex; align-items: center; gap: 8px; }
+.kv .key { font-family: var(--mono); font-size: 13px; }
 
-/* ------------------ Code block & status ------------------ */
+/* Code & status */
 pre, code, kbd, samp { font-family: var(--mono); }
 pre {
-  margin: 0;
-  padding: 14px;
-  background: #0b1220;  /* dark panel */
-  color: #e5e7eb;
-  border-radius: 10px;
-  overflow: auto;
+  margin: 0; padding: 14px;
+  background: #0b1220; color: #e5e7eb;
+  border-radius: 10px; overflow: auto;
 }
+#status { margin-top: 10px; font-size: 13px; color: var(--muted); }
 
-#status {
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-/* ------------------ Sections ------------------ */
-.section-title {
-  font-weight: 600; margin-bottom: 10px; color: #0f172a;
-}
-
-.row { display: flex; align-items: center; gap: 8px; }
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-/* =========================================================
-   ColorDot component (editable swatch + popover)
-   ========================================================= */
+/* ColorDot component */
 .cd-host { position: relative; display: inline-block; }
 .cd-dot {
   width: var(--cd-size, 18px);
@@ -236,11 +173,10 @@ pre {
   vertical-align: middle;
   cursor: pointer;
   outline: none;
-  background: #fff; /* color set inline via JS */
+  background: #fff;
 }
 .cd-dot:focus { box-shadow: 0 0 0 2px rgba(59, 130, 246, .35); }
 
-/* Popover */
 .cd-popover {
   position: absolute;
   z-index: 9999;
@@ -260,27 +196,10 @@ pre {
   gap: 10px;
   margin: 8px 0;
 }
-.cd-l {
-  color: var(--muted);
-  font-size: 12px;
-  text-align: right;
-}
-.cd-hex {
-  width: 110px;
-  font-family: var(--mono);
-  font-size: 13px;
-}
-.cd-native {
-  width: 40px; height: 30px;
-  padding: 0; border: none; background: transparent;
-}
-.cd-val {
-  width: 42px; text-align: right;
-  font-family: var(--mono);
-  color: #1f2937;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
-}
+.cd-l { color: var(--muted); font-size: 12px; text-align: right; }
+.cd-hex { width: 110px; font-family: var(--mono); font-size: 13px; }
+.cd-native { width: 40px; height: 30px; padding: 0; border: none; background: transparent; }
+.cd-val { width: 42px; text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .cd-actions { display:flex; justify-content:flex-end; gap:8px; margin-top: 6px; }
 .cd-actions .cd-close {
   padding: 6px 10px; font-size: 12px; border-radius: 8px;
@@ -288,29 +207,12 @@ pre {
 }
 .cd-actions .cd-close:hover { background: #f3f4f6; }
 
-/* Ensure the popover can't run off right edge on small screens */
-@media (max-width: 520px) {
-  .cd-popover {
-    left: 8px !important; right: 8px; min-width: auto; width: calc(100vw - 32px);
-  }
-}
-
-/* =========================================================
-   Restricted Palette list rows
-   Expecting markup from controls.js:
-   <label class="rp-item">
-     <input type="checkbox" class="rp-check">
-     <span class="cd-host">…dot…</span>
-     <span class="chip"></span>
-     <span class="mono">#HEX</span>
-   </label>
-   ========================================================= */
+/* Restricted Palette */
 #restrictedList {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-
 #restrictedList .rp-item {
   display: grid;
   grid-template-columns: auto auto auto 1fr;
@@ -321,128 +223,24 @@ pre {
   border: 1px solid var(--border);
   border-radius: 10px;
 }
-
 #restrictedList .rp-item:hover {
-  border-color: #d1d5db; /* gray-300 */
+  border-color: #d1d5db;
   background: #fafafa;
 }
-
-/* Legacy chip kept for spacing; visually neutral now */
 #restrictedList .rp-item .chip {
   width: 0; height: 0; padding: 0; border: none;
 }
 
-/* Make the whole label clickable without breaking inputs */
-#restrictedList .rp-item input[type="checkbox"] { margin-right: 2px; }
-
-/* Compact mode for dense palettes (optional) */
-#restrictedList.compact .rp-item {
-  padding: 6px 8px;
-  gap: 8px;
-}
-
-/* =========================================================
-   Utility helpers
-   ========================================================= */
+/* Utility */
 .hidden { display: none !important; }
 .muted { color: var(--muted); }
 .divider { height: 1px; background: var(--border); margin: 12px 0; }
 
-/* Scroll beauty on dark code blocks */
-pre::-webkit-scrollbar { height: 10px; }
-pre::-webkit-scrollbar-thumb {
-  background: #1f2937; border-radius: 8px; border: 2px solid #0b1220;
-}
-pre::-webkit-scrollbar-track { background: #0b1220; }
-
-/* =========================
-   Compatibility aliases
-   (map your HTML classes to the styles in this sheet)
-   Paste BELOW everything else in css/styles.css
-   ========================= */
-
-/* .card behaves like our .panel */
-.card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-.card > h2 {
-  margin: 0;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-  background: #fbfdff;
-  font-weight: 700;
-  font-size: 18px;
-}
-.card > *:not(h2) { padding: 16px; }
-
-/* Buttons (.btn matches our generic button styles) */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  background: var(--accent);
-  color: #fff;
-  cursor: pointer;
-  user-select: none;
-  transition: transform .05s ease, box-shadow .15s ease, background .15s ease;
-}
-.btn:hover { background: var(--accent-2); }
-.btn:active { transform: translateY(1px); }
-
-.btn-ghost {
-  background: #fff;
-  color: #111827;
-  border-color: var(--border);
-}
-.btn-ghost:hover { background: #f3f4f6; }
-
-.btn-danger {
-  background: #dc2626; /* red-600 */
-  border-color: transparent;
-}
-.btn-danger:hover { background: #ef4444; }
-
-/* Camera/file input "label buttons" */
-.picker {
-  position: relative;
-}
-.picker input[type="file"] {
-  position: absolute; inset: 0;
-  opacity: 0; cursor: pointer;
-}
-
-/* Rows, helpers, key/value labels */
-.row { display: flex; align-items: center; gap: 10px; }
-.help { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
-
-.kv { display: inline-flex; align-items: center; gap: 8px; }
-.kv .key {
-  font-family: var(--mono);
-  letter-spacing: 0.2px;
-  color: #111827;
-  font-size: 13px;
-}
-
-/* Monospace blocks/lists */
-.code-list, .code-list pre { margin: 0; }
-.mono { font-family: var(--mono); letter-spacing: 0.2px; font-size: 13px; }
-
-/* Projects drawer (basic) */
+/* Projects drawer */
 .projects { display: none; }
 .projects.open { display: block; }
 .projects-head { font-weight: 600; margin-bottom: 8px; }
 .projects-actions { display: flex; gap: 8px; margin-top: 8px; }
 .projects-list { display: grid; gap: 8px; }
-
-/* Report footer area */
 .report-footer { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-
-/* Grow utility for flex children */
 .grow { flex: 1 1 auto; }
