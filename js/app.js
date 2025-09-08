@@ -1,37 +1,82 @@
 // js/app.js
-// App orchestrator — wires UI, state, and events (incl. editable color dots)
+// Orchestrates UI wiring, state, and events (incl. editable color dots)
 
 import { renderRestrictedFromPalette, getRestrictedInkIndices } from './ui/controls.js';
-
-// If you already have color utils elsewhere (e.g., ./color/space.js), import them.
-// Otherwise these safe fallbacks will be used.
-let hexToRgb, rgbToHex;
-try {
-  const space = await import('./color/space.js');
-  hexToRgb = space.hexToRgb;
-  rgbToHex = space.rgbToHex;
-} catch (e) {
-  // Fallback tiny utils
-  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-  hexToRgb = (hx) => {
-    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec((hx||'').trim());
-    if (!m) return null;
-    return { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) };
-  };
-  rgbToHex = (r,g,b) => '#' + [r,g,b].map(v => clamp(v|0,0,255).toString(16).padStart(2,'0')).join('');
-}
+import { hexToRgb, rgbToHex } from './color/space.js'; // ✅ static import (no top-level await)
 
 // ---------- DOM ----------
+const $ = (sel) => document.querySelector(sel);
 const els = {
-  // Restricted palette container (UL/OL/DIV) where items render
-  restrictedList: document.querySelector('#restrictedList'),
+  // Header / Projects
+  openProjects: $('#openProjects'),
+  projectsPane: $('#projectsPane'),
+  closeProjects: $('#closeProjects'),
+  projectsList: $('#projectsList'),
+  refreshProjects: $('#refreshProjects'),
+  saveProject: $('#saveProject'),
+  exportProject: $('#exportProject'),
+  importProject: $('#importProject'),
+  deleteProject: $('#deleteProject'),
 
-  // Optional: buttons/inputs you might have
-  btnSave: document.querySelector('#btnSave'),
-  btnReset: document.querySelector('#btnReset'),
-  codeList: document.querySelector('#codeList'),           // e.g., <pre id="codeList">
-  hexTextarea: document.querySelector('#hexTextarea'),     // optional bulk editor
-  status: document.querySelector('#status'),
+  // Image inputs
+  fileInput: $('#fileInput'),
+  cameraInput: $('#cameraInput'),
+  pasteBtn: $('#pasteBtn'),
+  resetBtn: $('#resetBtn'),
+  maxW: $('#maxW'),
+  keepFullRes: $('#keepFullRes'),
+  sharpenEdges: $('#sharpenEdges'),
+
+  // Canvases
+  srcCanvas: $('#srcCanvas'),
+  outCanvas: $('#outCanvas'),
+
+  // Palette controls
+  kColors: $('#kColors'),
+  autoExtract: $('#autoExtract'),
+
+  // Restricted Palette
+  restrictedList: $('#restrictedList'),
+  restrictedSelectAll: $('#restrictedSelectAll'),
+  restrictedSelectNone: $('#restrictedSelectNone'),
+  allowWhite: $('#allowWhite'),
+
+  // Suggestions / Rules
+  btnSuggestHueLuma: $('#btnSuggestHueLuma'),
+  btnSmartMix: $('#btnSmartMix'),
+  addRule: $('#addRule'),
+  btnRefreshOutput: $('#btnRefreshOutput'),
+  rulesTable: $('#rulesTable'),
+
+  // Map & Preview
+  wChroma: $('#wChroma'),
+  wChromaOut: $('#wChromaOut'),
+  wLight: $('#wLight'),
+  wLightOut: $('#wLightOut'),
+  useDither: $('#useDither'),
+  bgMode: $('#bgMode'),
+  applyBtn: $('#applyBtn'),
+  bigRegen: $('#bigRegen'),
+
+  // Export & Codes
+  exportScale: $('#exportScale'),
+  downloadBtn: $('#downloadBtn'),
+  vectorExport: $('#vectorExport'),
+  colorCodeMode: $('#colorCodeMode'),
+  mailtoLink: $('#mailtoLink'),
+  exportReport: $('#exportReport'),
+  codeList: $('#codeList'),
+
+  // Misc
+  status: $('#status'),
+  toasts: $('#toasts'),
+
+  // Optional editor overlay (kept inert unless you wire modules)
+  editorOverlay: $('#editorOverlay'),
+  openEditor: $('#openEditor'),
+  editorDone: $('#editorDone'),
+  editCanvas: $('#editCanvas'),
+  editOverlay: $('#editOverlay'),
 };
 
 // ---------- App State ----------
@@ -39,11 +84,12 @@ const DEFAULT_HEXES = ['#CE6D01', '#8B3400', '#F23300', '#0CB300', '#FFFFFF'];
 const DEFAULT_TOL = 64;
 
 const state = {
-  // palette: [{r,g,b,tol}, ...]
+  // [{r,g,b,tol}, ...]
   palette: [],
-  // indices included as "restricted inks"
+  // selected indices for restricted inks
   restricted: new Set(),
-  // localStorage key
+  // image data
+  srcImage: null,
   key: 'limited-palette-designer:v1',
 };
 
@@ -53,13 +99,12 @@ init();
 function init() {
   loadPrefs();
 
-  // If empty (first run), seed from defaults
   if (!state.palette?.length) {
     state.palette = DEFAULT_HEXES.map(h => {
-      const rgb = hexToRgb(h) || { r:255, g:255, b:255 };
+      const rgb = hexToRgb(h) || { r: 255, g: 255, b: 255 };
       return { ...rgb, tol: DEFAULT_TOL };
     });
-    state.restricted = new Set(state.palette.map((_, i) => i)); // all enabled by default
+    state.restricted = new Set(state.palette.map((_, i) => i));
   }
 
   renderAll();
@@ -69,59 +114,69 @@ function init() {
 
 // ---------- Render ----------
 function renderAll() {
-  const hexes = state.palette.map(p => rgbToHex(p.r, p.g, p.b));
-
-  // Render Restricted Palette list with editable dots
-  renderRestrictedFromPalette(els, hexes, state.restricted);
-
-  // Optional: show a code export
+  renderRestrictedPaletteUI();
   renderCodeList();
+  syncWeightsUI();
+  updateButtonsEnabled();
+}
 
-  // Optional: sync a bulk hex textarea if you use one
-  if (els.hexTextarea) {
-    els.hexTextarea.value = hexes.join('\n');
-  }
+function renderRestrictedPaletteUI() {
+  const hexes = state.palette.map(p => rgbToHex(p.r, p.g, p.b));
+  renderRestrictedFromPalette(els, hexes, state.restricted);
 }
 
 function renderCodeList() {
   if (!els.codeList) return;
   const hexes = state.palette.map(p => rgbToHex(p.r, p.g, p.b));
-  const indices = [...state.restricted].sort((a,b)=>a-b);
+  const indices = [...state.restricted].sort((a, b) => a - b);
   const active = indices.map(i => hexes[i]);
 
-  // Just a simple preview of active inks. Adjust to your preferred format.
   const lines = [
     '// Restricted Inks (active):',
-    ...active.map((hx, idx) => `Ink ${idx+1}: ${hx}`),
+    ...active.map((hx, idx) => `Ink ${idx + 1}: ${hx}`),
     '',
     '// Full Palette (with tolerance):',
-    ...state.palette.map((p, i) => `#${String(i).padStart(2,'0')} ${rgbToHex(p.r,p.g,p.b)}  tol=${p.tol}`)
+    ...state.palette.map((p, i) => `#${String(i).padStart(2, '0')} ${rgbToHex(p.r, p.g, p.b)}  tol=${p.tol}`)
   ].join('\n');
 
   els.codeList.textContent = lines;
 }
 
+function syncWeightsUI() {
+  if (els.wChroma && els.wChromaOut) {
+    els.wChromaOut.textContent = (Number(els.wChroma.value || 100) / 100).toFixed(2) + '×';
+  }
+  if (els.wLight && els.wLightOut) {
+    els.wLightOut.textContent = (Number(els.wLight.value || 100) / 100).toFixed(2) + '×';
+  }
+}
+
+function updateButtonsEnabled() {
+  const hasImage = !!state.srcImage;
+  if (els.resetBtn) els.resetBtn.disabled = !hasImage;
+  if (els.autoExtract) els.autoExtract.disabled = !hasImage;
+  if (els.applyBtn) els.applyBtn.disabled = !hasImage;
+  if (els.downloadBtn) els.downloadBtn.disabled = !hasImage;
+  if (els.vectorExport) els.vectorExport.disabled = !hasImage;
+}
+
 // ---------- Events ----------
 function wireEvents() {
-  // 1) Color dot edits from Restricted Palette
+  // Color dot edits in Restricted list
   els.restrictedList?.addEventListener('restricted:coloredit', (e) => {
     const { index, hex } = e.detail || {};
     if (index == null || !hex) return;
     const rgb = hexToRgb(hex);
     if (!rgb) return;
-
     const prev = state.palette[index] || { tol: DEFAULT_TOL };
     state.palette[index] = { r: rgb.r, g: rgb.g, b: rgb.b, tol: prev.tol ?? DEFAULT_TOL };
-
-    // Re-render UI that depends on palette
     renderAll();
     persistPrefs();
-    info(`Updated color ${index+1} → ${hex.toUpperCase()}`);
+    info(`Updated color ${index + 1} → ${hex.toUpperCase()}`);
   });
 
-  // 2) Checkbox toggles (include/exclude inks)
+  // Restricted checkboxes
   els.restrictedList?.addEventListener('restricted:toggle', () => {
-    // recompute restricted set from current DOM
     const indices = getRestrictedInkIndices({ restrictedList: els.restrictedList });
     state.restricted = new Set(indices);
     renderCodeList();
@@ -129,46 +184,109 @@ function wireEvents() {
     info('Updated restricted inks');
   });
 
-  // 3) Optional: bulk hex textarea import (one hex per line)
-  els.hexTextarea?.addEventListener('change', () => {
-    const lines = els.hexTextarea.value
-      .split(/\r?\n/)
-      .map(s => s.trim())
-      .filter(Boolean);
+  // File inputs
+  els.fileInput?.addEventListener('change', handleFile);
+  els.cameraInput?.addEventListener('change', handleFile);
 
-    if (!lines.length) return;
+  // Paste image
+  els.pasteBtn?.addEventListener('click', async () => {
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        for (const type of item.types) {
+          if (type.startsWith('image/')) {
+            const blob = await item.getType(type);
+            await loadBlobToCanvas(blob, els.srcCanvas);
+            state.srcImage = true;
+            renderAll();
+            info('Image pasted.');
+            return;
+          }
+        }
+      }
+      info('No image data on clipboard.');
+    } catch (e) {
+      console.warn(e);
+      info('Clipboard paste not available.');
+    }
+  });
 
-    state.palette = lines.map(h => {
-      const rgb = hexToRgb(h) || { r:255, g:255, b:255 };
-      return { ...rgb, tol: DEFAULT_TOL };
-    });
-    // Reset restricted to all
-    state.restricted = new Set(state.palette.map((_, i) => i));
-
+  // Reset
+  els.resetBtn?.addEventListener('click', () => {
+    if (els.srcCanvas) clearCanvas(els.srcCanvas);
+    if (els.outCanvas) clearCanvas(els.outCanvas);
+    state.srcImage = null;
     renderAll();
-    persistPrefs();
-    info('Imported palette from text');
+    info('Reset.');
   });
 
-  // 4) Save / Reset buttons (optional)
-  els.btnSave?.addEventListener('click', () => {
-    persistPrefs();
-    info('Saved');
+  // Sliders
+  els.wChroma?.addEventListener('input', syncWeightsUI);
+  els.wLight?.addEventListener('input', syncWeightsUI);
+
+  // Projects drawer (basic toggle)
+  els.openProjects?.addEventListener('click', () => {
+    els.projectsPane?.classList.add('open');
+  });
+  els.closeProjects?.addEventListener('click', () => {
+    els.projectsPane?.classList.remove('open');
   });
 
-  els.btnReset?.addEventListener('click', () => {
-    localStorage.removeItem(state.key);
-    state.palette = DEFAULT_HEXES.map(h => {
-      const rgb = hexToRgb(h) || { r:255, g:255, b:255 };
-      return { ...rgb, tol: DEFAULT_TOL };
-    });
-    state.restricted = new Set(state.palette.map((_, i) => i));
-    renderAll();
-    info('Reset to defaults');
-  });
-
-  // 5) Window unload — persist quietly
+  // Prevent unload loss
   window.addEventListener('beforeunload', persistPrefs);
+}
+
+// ---------- Image helpers ----------
+async function handleFile(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  await loadBlobToCanvas(file, els.srcCanvas);
+  state.srcImage = true;
+  renderAll();
+  info(`Loaded ${file.name}`);
+}
+
+async function loadBlobToCanvas(blob, canvas) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => {
+      drawToCanvas(img, canvas, Number(els.maxW?.value || 1400));
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      info('Could not load image.');
+    };
+    img.src = url;
+  } catch (e) {
+    URL.revokeObjectURL(url);
+    console.warn(e);
+    info('Could not load image.');
+  }
+}
+
+function drawToCanvas(img, canvas, maxW = 1400) {
+  if (!canvas) return;
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const scale = Math.min(1, maxW > 0 ? maxW / w : 1);
+  const dw = Math.max(1, Math.round(w * scale));
+  const dh = Math.max(1, Math.round(h * scale));
+  canvas.width = dw;
+  canvas.height = dh;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.clearRect(0, 0, dw, dh);
+  ctx.drawImage(img, 0, 0, dw, dh);
+}
+
+function clearCanvas(canvas) {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  canvas.width = 1; canvas.height = 1;
 }
 
 // ---------- Persistence ----------
@@ -179,11 +297,11 @@ function loadPrefs() {
     const data = JSON.parse(raw);
     if (Array.isArray(data.palette)) {
       state.palette = data.palette.map(p => ({
-        r: p.r|0, g: p.g|0, b: p.b|0, tol: (p.tol ?? DEFAULT_TOL)|0
+        r: p.r | 0, g: p.g | 0, b: p.b | 0, tol: (p.tol ?? DEFAULT_TOL) | 0
       }));
     }
     if (Array.isArray(data.restricted)) {
-      state.restricted = new Set(data.restricted.map(i => i|0));
+      state.restricted = new Set(data.restricted.map(i => i | 0));
     }
   } catch (e) {
     console.warn('Prefs load failed:', e);
@@ -206,23 +324,19 @@ function persistPrefs() {
 function info(msg) {
   if (!els.status) return;
   const now = new Date();
-  const hh = String(now.getHours()).padStart(2,'0');
-  const mm = String(now.getMinutes()).padStart(2,'0');
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
   els.status.textContent = `[${hh}:${mm}] ${msg}`;
 }
 
-// ---------- Export hooks (optional) ----------
-/**
- * If other modules need access (e.g., canvas mapper),
- * you can export selected pieces here.
- */
+// Public helpers (if needed elsewhere)
 export function getActiveRestrictedHexes() {
-  const indices = [...state.restricted].sort((a,b)=>a-b);
+  const indices = [...state.restricted].sort((a, b) => a - b);
   return indices.map(i => rgbToHex(state.palette[i].r, state.palette[i].g, state.palette[i].b));
 }
 export function setToleranceAt(index, tol) {
   if (!state.palette[index]) return;
-  state.palette[index].tol = Math.max(0, Math.min(255, tol|0));
+  state.palette[index].tol = Math.max(0, Math.min(255, tol | 0));
   persistPrefs();
   renderCodeList();
 }
