@@ -4,150 +4,140 @@
   <meta charset="utf-8" />
   <meta
     name="viewport"
-    content="width=device-width,initial-scale=1,maximum-scale=1"
+    content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
   />
-  <title>Palette Mapper</title>
+  <title>Palette Mapper – Limited Palette Recolor</title>
 
-  <!-- App CSS -->
+  <!-- Styles -->
   <link rel="stylesheet" href="css/styles.css" />
-
-  <!-- Minimal fallback if CSS fails -->
-  <style>
-    #cssWarning{display:none;background:#fef3c7;border:1px solid #fde68a;color:#78350f;padding:12px 14px;border-radius:12px;margin:0 0 18px}
-    .picker{position:relative;display:inline-flex;align-items:center;justify-content:center}
-    .picker input[type=file]{position:absolute;inset:0;opacity:0;appearance:none;border:0;margin:0;padding:0;cursor:pointer}
-  </style>
 </head>
 <body>
-<header>
-  <div>
-    <h1>Palette Mapper</h1>
-    <p>Reduce photos to a limited ink set for cup/merch printing</p>
-  </div>
-  <button id="openProjects" class="btn btn-ghost">Projects</button>
-</header>
-
-<main>
-  <div id="cssWarning" role="status" aria-live="polite">
-    Stylesheet didn’t load. Ensure <code>css/styles.css</code> exists.
-  </div>
-  <script>
-    // Hide the warning if styles applied
-    window.addEventListener('load', () => {
-      const bg = getComputedStyle(document.body).backgroundImage || getComputedStyle(document.body).backgroundColor;
-      document.getElementById('cssWarning').style.display =
-        (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') ? 'none' : 'block';
-    });
-  </script>
-
-  <!-- 1) Load Photo -->
-  <section class="card" data-step="load">
-    <h2>1) Load photo</h2>
-
-    <div class="row" style="gap:12px;flex-wrap:wrap">
-      <!-- iOS-safe: label as button -->
-      <label class="btn picker">
-        Choose File
-        <input id="fileInput" type="file" accept="image/*" />
-      </label>
-
-      <label class="btn btn-ghost picker">
-        Use Camera
-        <input id="cameraInput" type="file" accept="image/*" capture="environment" />
-      </label>
-
-      <button id="pasteBtn" class="btn">Paste</button>
-      <button id="resetBtn" class="btn btn-ghost" disabled>Reset</button>
+  <!-- Header -->
+  <header>
+    <div>
+      <h1>Palette Mapper</h1>
+      <p>Reduce photos to a limited ink set for printing</p>
     </div>
+    <button id="openProjects" class="btn btn-ghost" type="button">Projects</button>
+  </header>
 
-    <p class="help">Upload works with Photo Library or Camera on iPhone. HEIC is supported in modern Safari/Chromium; otherwise you’ll get a helpful prompt.</p>
+  <main>
+    <!-- 1) Load image -->
+    <section class="card" aria-labelledby="sec-load">
+      <h2 id="sec-load">1) Load image</h2>
 
-    <div class="row">
-      <label class="kv">
-        <span class="key">Max preview width (px)</span>
-        <input id="maxW" type="number" value="1400" min="200" max="4000">
-      </label>
-      <label class="kv"><input id="keepFullRes" type="checkbox" checked> <span class="key">Process at full resolution</span></label>
-      <label class="kv"><input id="sharpenEdges" type="checkbox"> <span class="key">Sharpen text edges</span></label>
-    </div>
+      <div class="row" style="gap:12px;flex-wrap:wrap">
+        <!-- iOS-friendly file pickers -->
+        <label class="btn picker">
+          Choose File
+          <input id="fileInput" type="file" accept="image/*" />
+        </label>
 
-    <div class="panel">
-      <div class="panel-head">Original</div>
-      <canvas id="srcCanvas"></canvas>
-    </div>
+        <label class="btn btn-ghost picker">
+          Use Camera
+          <input id="cameraInput" type="file" accept="image/*" capture="environment" />
+        </label>
 
-    <p class="help">Full-screen editor (eyedrop / lasso) is available once a photo is loaded.</p>
-    <button id="openEditor" class="btn" disabled>Open full-screen editor</button>
-  </section>
+        <button id="pasteBtn" class="btn" type="button">Paste</button>
+        <button id="resetBtn" class="btn btn-ghost" type="button" disabled>Reset</button>
+      </div>
 
-  <!-- 2) Working Palette (auto) -->
-  <section class="card" data-step="working">
-    <h2>2) Working Palette (auto)</h2>
-    <div class="help">This palette is extracted from your photo automatically. Re-extract with a different K if you want.</div>
+      <p class="help">JPG/PNG/HEIC supported. HEIC decodes in modern Safari and most Chromium via WebCodecs.</p>
 
-    <div class="row" style="gap:10px;flex-wrap:wrap">
-      <label class="kv">
-        <span class="key">K colors</span>
-        <input id="kColors" type="number" min="2" max="16" value="10">
-      </label>
-      <button id="autoExtract" class="btn btn-ghost" disabled>Re-extract</button>
-    </div>
+      <div class="row">
+        <label class="kv">
+          <span class="key">Max preview width (px)</span>
+          <input id="maxW" type="number" value="1400" min="200" max="4000" />
+        </label>
+        <label class="kv"><input id="keepFullRes" type="checkbox" checked /> <span class="key">Process at full resolution</span></label>
+        <label class="kv"><input id="sharpenEdges" type="checkbox" /> <span class="key">Sharpen edges</span></label>
+      </div>
 
-    <!-- Read-only swatches of the auto palette -->
-    <div id="workingList" class="panel" style="padding:10px"></div>
-  </section>
+      <div class="panel">
+        <div class="panel-head">Original</div>
+        <canvas id="srcCanvas"></canvas>
+      </div>
+    </section>
 
-  <!-- 3) Final (Restricted) Palette -->
-  <section class="card" data-step="restricted">
-    <h2>3) Final (Restricted) Palette</h2>
-    <div class="help">Select the inks you’ll allow in the final output. Save &amp; reuse sets across projects.</div>
+    <!-- 2) Palette -->
+    <section class="card" aria-labelledby="sec-palette">
+      <h2 id="sec-palette">2) Palette</h2>
 
-    <div class="row" style="gap:8px;flex-wrap:wrap">
-      <button id="restrictedSelectAll" class="btn btn-ghost">Select all</button>
-      <button id="restrictedSelectNone" class="btn btn-ghost">Select none</button>
-      <button id="restrictedSaveSet" class="btn">Save set</button>
-      <button id="restrictedLoadSet" class="btn btn-ghost">Load set</button>
-      <span id="missingMixes" class="mono" style="opacity:.8"></span>
-    </div>
+      <div class="row" style="gap:10px;flex-wrap:wrap">
+        <label class="kv">
+          <span class="key">K colors</span>
+          <input id="kColors" type="number" min="2" max="16" value="10" />
+        </label>
+        <button id="autoExtract" class="btn btn-ghost" type="button" disabled>Auto extract</button>
+      </div>
 
-    <div id="restrictedList" class="panel" style="padding:10px"></div>
-  </section>
+      <p class="help">We auto-extract a working palette when the image loads. You can re-run auto-extract with a different K.</p>
+    </section>
 
-  <!-- 4) Mixing & Replacements (then Mapping) -->
-  <section class="card" data-step="mixing">
-    <h2>4) Mixing &amp; Replacements</h2>
-    <div class="help">Replace dropped colors using mixes of your restricted inks. Add rules manually or use the helpers.</div>
+    <!-- 3) Restricted Palette (final inks) -->
+    <section class="card" aria-labelledby="sec-restricted">
+      <h2 id="sec-restricted">3) Restricted Palette (Final Inks)</h2>
 
-    <div class="row" style="gap:8px;flex-wrap:wrap">
-      <button id="btnSuggestHueLuma" class="btn btn-ghost">Suggest by Hue &amp; Luma</button>
-      <button id="btnSmartMix" class="btn btn-ghost">Smart Mix (target → inks)</button>
-      <button id="addRule" class="btn">Add manual rule</button>
-    </div>
+      <div class="row" style="gap:10px;flex-wrap:wrap">
+        <button id="restrictedSelectAll" class="btn btn-ghost" type="button">Select all</button>
+        <button id="restrictedSelectNone" class="btn btn-ghost" type="button">Select none</button>
+        <label class="kv"><input id="allowWhite" type="checkbox" checked /> <span class="key">Allow White mixing</span></label>
+      </div>
 
-    <div class="panel" style="padding:10px">
-      <table id="rulesTable" style="width:100%">
-        <thead>
-          <tr>
-            <th>On</th><th>Target</th><th>Pattern</th><th>Inks</th><th>Density</th><th>Del</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+      <div id="restrictedList"></div>
+      <p class="help">Choose the inks you want to allow in the final output. Suggestions &amp; mixes will use only these.</p>
+    </section>
 
-    <!-- Advanced mapping settings come AFTER mixes, before applying -->
-    <details class="panel" style="margin-top:10px">
-      <summary>Advanced mapping settings</summary>
+    <!-- 4) Suggestions & Rules (mixing and textures) -->
+    <section class="card" aria-labelledby="sec-suggest">
+      <h2 id="sec-suggest">4) Suggestions &amp; Rules</h2>
+
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button id="btnSuggestHueLuma" class="btn btn-ghost" type="button">Suggest by Hue &amp; Luma</button>
+        <button id="btnSmartMix" class="btn btn-ghost" type="button">Smart Mix (target → inks)</button>
+        <button id="addRule" class="btn" type="button">Add rule</button>
+        <button id="btnRefreshOutput" class="btn btn-ghost" type="button">Refresh Output</button>
+      </div>
+
+      <div class="panel" style="padding:10px">
+        <table id="rulesTable" style="width:100%">
+          <thead>
+            <tr>
+              <th>On</th>
+              <th>Target</th>
+              <th>Pattern</th>
+              <th>Inks</th>
+              <th>Density</th>
+              <th>Del</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top:12px">Optional halftone preview</h3>
+      <div class="row">
+        <label class="kv"><input id="useHalftone" type="checkbox" /> <span class="key">Show dot halftone preview</span></label>
+        <label class="kv"><span class="key">Cell</span> <input id="dotCell" type="number" value="6" min="3" max="64" /></label>
+        <label class="kv"><span class="key">BG</span> <input id="dotBg" type="text" class="mono" value="#FFFFFF" /></label>
+        <label class="kv"><input id="dotJitter" type="checkbox" /> <span class="key">Jitter</span></label>
+      </div>
+    </section>
+
+    <!-- 5) Map + Preview -->
+    <section class="card" aria-labelledby="sec-map">
+      <h2 id="sec-map">5) Map &amp; Preview</h2>
+
       <div class="row" id="weightsRow">
         <label>
           <span>Chroma weight <span id="wChromaOut" class="mono">1.00×</span></span>
-          <input id="wChroma" type="range" min="50" max="200" value="100">
+          <input id="wChroma" type="range" min="50" max="200" value="100" />
         </label>
         <label>
           <span>Luma weight <span id="wLightOut" class="mono">1.00×</span></span>
-          <input id="wLight" type="range" min="50" max="200" value="100">
+          <input id="wLight" type="range" min="50" max="200" value="100" />
         </label>
-        <label class="kv"><input id="useDither" type="checkbox"> <span class="key">Floyd–Steinberg dithering</span></label>
+        <label class="kv"><input id="useDither" type="checkbox" /> <span class="key">Floyd–Steinberg dithering</span></label>
         <label class="kv">
           <span class="key">Background</span>
           <select id="bgMode">
@@ -156,118 +146,87 @@
             <option value="transparent">Keep alpha</option>
           </select>
         </label>
+        <button id="applyBtn" class="btn" type="button" disabled>Apply mapping</button>
+        <button id="bigRegen" class="btn btn-ghost" type="button">Regenerate mapping</button>
       </div>
-    </details>
 
-    <div class="row" style="margin-top:8px">
-      <button id="applyBtn" class="btn" disabled>Apply mapping</button>
+      <div class="panel">
+        <div class="panel-head">Mapped</div>
+        <canvas id="outCanvas"></canvas>
+      </div>
+    </section>
+
+    <!-- 6) Export & Codes -->
+    <section class="card" aria-labelledby="sec-export">
+      <h2 id="sec-export">6) Export &amp; Codes</h2>
+
+      <div class="row" style="gap:12px;flex-wrap:wrap">
+        <label class="kv">
+          <span class="key">Export scale</span>
+          <select id="exportScale">
+            <option value="1">1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+        </label>
+        <button id="downloadBtn" class="btn" type="button" disabled>Download PNG</button>
+        <button id="vectorExport" class="btn btn-ghost" type="button" disabled>Export SVG</button>
+      </div>
+
+      <div class="row" style="gap:12px;flex-wrap:wrap;margin-top:10px">
+        <label class="kv">
+          <span class="key">Code mode</span>
+          <select id="colorCodeMode">
+            <option value="pms">PMS</option>
+            <option value="hex">HEX</option>
+          </select>
+        </label>
+        <a id="mailtoLink" class="btn btn-ghost" href="#" role="button">Email prep</a>
+        <button id="exportReport" class="btn" type="button">Export report</button>
+      </div>
+
+      <div id="codeList" class="code-list"></div>
+      <div class="report-footer">Report lists FINAL inks (Restricted Palette). PMS matches are nearest by Lab distance.</div>
+    </section>
+  </main>
+
+  <!-- Projects Drawer -->
+  <aside id="projectsPane" class="projects" aria-hidden="true">
+    <div class="projects-head">
+      <strong>Projects</strong>
+      <button id="closeProjects" class="btn btn-ghost" type="button">Close</button>
     </div>
-  </section>
 
-  <!-- 5) Mapped Preview -->
-  <section class="card" data-step="mapped">
-    <h2>5) Mapped Preview</h2>
-    <div class="panel">
-      <div class="panel-head">Mapped</div>
-      <canvas id="outCanvas"></canvas>
-    </div>
-    <div class="row" style="gap:8px;margin-top:10px">
-      <button id="btnRefreshOutput" class="btn btn-ghost">Remap</button>
-    </div>
-  </section>
-
-  <!-- 6) Export -->
-  <section class="card" data-step="export">
-    <h2>6) Export</h2>
-
-    <div class="row" style="margin-top:6px;gap:10px;flex-wrap:wrap">
-      <label class="kv">
-        <span class="key">Export scale</span>
-        <select id="exportScale">
-          <option value="1">1×</option>
-          <option value="2">2×</option>
-          <option value="4">4×</option>
-        </select>
+    <div class="projects-actions">
+      <button id="refreshProjects" class="btn btn-ghost" type="button">Refresh</button>
+      <button id="saveProject" class="btn" type="button">Save</button>
+      <button id="exportProject" class="btn btn-ghost" type="button">Export JSON</button>
+      <label class="btn btn-ghost" style="position:relative;overflow:hidden">
+        Import
+        <input id="importProject" type="file" accept="application/json" style="position:absolute;inset:0;opacity:0" />
       </label>
-      <button id="downloadBtn" class="btn" disabled>Download PNG</button>
-      <button id="vectorExport" class="btn btn-ghost" disabled>Export SVG</button>
+      <button id="deleteProject" class="btn btn-danger" type="button">Delete</button>
     </div>
 
-    <div class="row" style="gap:12px;margin-top:10px">
-      <label class="kv">
-        <span class="key">Code mode</span>
-        <select id="colorCodeMode">
-          <option value="pms">PMS</option>
-          <option value="hex">HEX</option>
-        </select>
-      </label>
-      <a id="mailtoLink" class="btn btn-ghost" href="#">Email prep</a>
-      <button id="exportReport" class="btn">Export report</button>
+    <div id="projectsList" class="projects-list"></div>
+  </aside>
+
+  <!-- (Optional) Editor overlay if you keep those modules -->
+  <div id="editorOverlay" class="hidden" aria-hidden="true">
+    <div class="editor-toolbar">
+      <button id="openEditor" class="btn btn-ghost" type="button" disabled>Open full-screen editor</button>
+      <div class="grow"></div>
+      <button id="editorDone" class="btn" type="button">Done</button>
     </div>
-
-    <div id="codeList" class="code-list" style="margin-top:8px"></div>
-    <div class="report-footer">Report lists FINAL inks (Restricted Palette). PMS matches are nearest by Lab distance.</div>
-  </section>
-</main>
-
-<!-- Projects Drawer -->
-<aside id="projectsPane" class="projects" aria-hidden="true">
-  <div class="projects-head">
-    <strong>Projects</strong>
-    <button id="closeProjects" class="btn btn-ghost">Close</button>
+    <canvas id="editCanvas"></canvas>
+    <canvas id="editOverlay"></canvas>
   </div>
 
-  <div class="projects-actions">
-    <button id="refreshProjects" class="btn btn-ghost">Refresh</button>
-    <button id="saveProject" class="btn">Save</button>
-    <button id="exportProject" class="btn btn-ghost">Export JSON</button>
-    <label class="btn btn-ghost" style="position:relative;overflow:hidden">
-      Import
-      <input id="importProject" type="file" accept="application/json" style="position:absolute;inset:0;opacity:0;">
-    </label>
-    <button id="deleteProject" class="btn btn-danger">Delete</button>
-  </div>
+  <div id="toasts"></div>
 
-  <div id="projectsList" class="projects-list"></div>
-</aside>
-
-<!-- Full-screen Editor (optional; modules wire it) -->
-<div id="editorOverlay" class="hidden" aria-hidden="true">
-  <div class="editor-toolbar">
-    <button id="toolEyedrop" class="btn btn-ghost">Eyedrop</button>
-    <button id="toolLasso" class="btn btn-ghost">Lasso</button>
-    <button id="toolPan" class="btn btn-ghost">Pan</button>
-    <div class="grow"></div>
-    <div class="row">
-      <span id="eyeSwatch" class="sw" style="width:20px;height:20px;border-radius:4px;border:1px solid var(--sw-outline)"></span>
-      <span id="eyeHex" class="mono">#000000</span>
-      <button id="eyeAdd" class="btn">Add to palette</button>
-      <button id="eyeCancel" class="btn btn-ghost">Clear mark</button>
-    </div>
-    <button id="editorDone" class="btn">Done</button>
-  </div>
-
-  <canvas id="editCanvas"></canvas>
-  <canvas id="editOverlay"></canvas>
-
-  <div class="editor-right">
-    <h3>Palette</h3>
-    <div id="editorPalette" class="inline-swatches"></div>
-
-    <h3>Limit inks for lasso</h3>
-    <div id="lassoChecks" class="chips"></div>
-    <div class="row" style="margin-top:8px">
-      <button id="lassoSave" class="btn" disabled>Save region</button>
-      <button id="lassoClear" class="btn btn-ghost" disabled>Clear</button>
-    </div>
-  </div>
-</div>
-
-<div id="toasts"></div>
-
-<!-- Scripts -->
-<script type="module" src="js/app.js"></script>
-<!-- Optional: enable improved SVG tracing -->
-<!-- <script src="js/imagetracer-loader.js"></script> -->
+  <!-- Scripts -->
+  <script type="module" src="js/app.js"></script>
+  <!-- Optional (uncomment when you drop the loader): -->
+  <!-- <script src="js/imagetracer-loader.js"></script> -->
 </body>
 </html>
