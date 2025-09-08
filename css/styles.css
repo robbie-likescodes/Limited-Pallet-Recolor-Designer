@@ -86,7 +86,6 @@ a { color: inherit; text-decoration: none; }
 }
 .card .body{ padding: 16px; }
 
-/* Panel blocks used inside cards */
 .panel{
   background: var(--panel);
   border: 1px solid var(--border);
