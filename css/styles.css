@@ -354,3 +354,95 @@ pre::-webkit-scrollbar-thumb {
   background: #1f2937; border-radius: 8px; border: 2px solid #0b1220;
 }
 pre::-webkit-scrollbar-track { background: #0b1220; }
+
+/* =========================
+   Compatibility aliases
+   (map your HTML classes to the styles in this sheet)
+   Paste BELOW everything else in css/styles.css
+   ========================= */
+
+/* .card behaves like our .panel */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.card > h2 {
+  margin: 0;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #fbfdff;
+  font-weight: 700;
+  font-size: 18px;
+}
+.card > *:not(h2) { padding: 16px; }
+
+/* Buttons (.btn matches our generic button styles) */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+  transition: transform .05s ease, box-shadow .15s ease, background .15s ease;
+}
+.btn:hover { background: var(--accent-2); }
+.btn:active { transform: translateY(1px); }
+
+.btn-ghost {
+  background: #fff;
+  color: #111827;
+  border-color: var(--border);
+}
+.btn-ghost:hover { background: #f3f4f6; }
+
+.btn-danger {
+  background: #dc2626; /* red-600 */
+  border-color: transparent;
+}
+.btn-danger:hover { background: #ef4444; }
+
+/* Camera/file input "label buttons" */
+.picker {
+  position: relative;
+}
+.picker input[type="file"] {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
+}
+
+/* Rows, helpers, key/value labels */
+.row { display: flex; align-items: center; gap: 10px; }
+.help { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+
+.kv { display: inline-flex; align-items: center; gap: 8px; }
+.kv .key {
+  font-family: var(--mono);
+  letter-spacing: 0.2px;
+  color: #111827;
+  font-size: 13px;
+}
+
+/* Monospace blocks/lists */
+.code-list, .code-list pre { margin: 0; }
+.mono { font-family: var(--mono); letter-spacing: 0.2px; font-size: 13px; }
+
+/* Projects drawer (basic) */
+.projects { display: none; }
+.projects.open { display: block; }
+.projects-head { font-weight: 600; margin-bottom: 8px; }
+.projects-actions { display: flex; gap: 8px; margin-top: 8px; }
+.projects-list { display: grid; gap: 8px; }
+
+/* Report footer area */
+.report-footer { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+
+/* Grow utility for flex children */
+.grow { flex: 1 1 auto; }
