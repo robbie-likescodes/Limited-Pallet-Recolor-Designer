@@ -1,144 +1,148 @@
-// js/app.js — comprehensive orchestrator with editable color dots
+// js/app.js — cohesive, full-featured orchestrator w/ editable color dots
 // -----------------------------------------------------------------------------
-// IMPORTANT: static imports only (Safari-safe). No top-level await.
-// This file assumes the following modules exist in your repo. All calls are
-// defensive (feature detection) so missing helpers won't crash the app.
+// SAFARI-SAFE: static imports only; no top-level await.
+// Matches repo APIs from the previously functional build.
 // -----------------------------------------------------------------------------
 
-// UI
+// UI (Restricted list + color dots)
 import {
   renderRestrictedFromPalette,
   getRestrictedInkIndices
 } from './ui/controls.js';
 
-// Color spaces / utils
+// Color utils
 import { hexToRgb, rgbToHex, rgbToHsl, hslToRgb } from './color/space.js';
 
-// Palette extraction & suggestions
-import * as Palette from './color/palette.js';       // e.g. Palette.autoExtract(...)
-import * as Suggest from './color/suggest.js';       // e.g. Suggest.byHueLuma(...), Suggest.smartMix(...)
+// Palette extraction / suggestions
+import * as Palette  from './color/palette.js';   // autoPaletteFromCanvasHybrid(canvas, k)
+import * as Suggest  from './color/suggest.js';   // suggestByHueLuma(srcCanvas, paletteHex, allowedIdx), smartMixSuggest(targetHex, paletteHex, allowedIdx)
 
-// Patterns / preview options (optional wiring)
-import * as Patterns from './color/patterns.js';     // e.g. halftone helpers
+// Patterns (optional)
+import * as Patterns from './color/patterns.js';
 
-// Mapping pipeline
-import * as Mapper from './mapping/mapper.js';       // e.g. Mapper.mapImage(...)
-import * as Sharpen from './mapping/sharpen.js';     // e.g. Sharpen.unsharpMask(...)
+// Mapping & sharpening
+import * as Mapper   from './mapping/mapper.js';  // mapToPalette(imageData, palette, opts)
+import * as Sharpen  from './mapping/sharpen.js'; // unsharpMask(imageData, amount)
 
-// Exporters
-import * as PNG from './export/png.js';              // e.g. PNG.exportPNG(...)
-import * as SVG from './export/svg.js';              // e.g. SVG.exportSVG(...)
-import * as Report from './export/report.js';        // e.g. Report.exportReport(...)
+// Exports
+import * as PNG      from './export/png.js';      // exportPNG(imageData, scale) -> Blob
+import * as SVG      from './export/svg.js';      // exportSVG(imageData, paletteHex, maxColors) -> string
+import * as Report   from './export/report.js';   // buildPrinterReport(), (opt) loadPmsJson()
 
-// IO & storage helpers
-import * as Files from './io/files.js';              // e.g. read blobs, dataurls
-import * as Store from './io/storage.js';            // e.g. list/save/load projects
+// IO & storage
+import * as Files    from './io/files.js';        // saveBlob(blob, name), saveText(text, name, mime)
+import * as Store    from './io/storage.js';      // list(), load(id), save(data), remove(id)
 
-// Canvas & image utilities
-import * as C2D from './utils/canvas.js';            // e.g. drawImageToFit, copy
-import * as Img from './utils/image.js';             // e.g. blobToImage
+// Canvas & image helpers (optional; we still implement local fallbacks)
+import * as C2D      from './utils/canvas.js';
+import * as Img      from './utils/image.js';
 
 // Toasts (optional)
-import * as Toasts from './ui/toasts.js';            // e.g. Toasts.show('...')
+import * as Toasts   from './ui/toasts.js';
 
 // -----------------------------------------------------------------------------
-// DOM getters
+// DOM
 // -----------------------------------------------------------------------------
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
 const els = {
   // Header / Projects
-  openProjects:     $('#openProjects'),
-  projectsPane:     $('#projectsPane'),
-  closeProjects:    $('#closeProjects'),
-  projectsList:     $('#projectsList'),
-  refreshProjects:  $('#refreshProjects'),
-  saveProject:      $('#saveProject'),
-  exportProject:    $('#exportProject'),
-  importProject:    $('#importProject'),
-  deleteProject:    $('#deleteProject'),
+  openProjects:        $('#openProjects'),
+  projectsPane:        $('#projectsPane'),
+  closeProjects:       $('#closeProjects'),
+  projectsList:        $('#projectsList'),
+  refreshProjects:     $('#refreshProjects'),
+  saveProject:         $('#saveProject'),
+  exportProject:       $('#exportProject'),
+  importProject:       $('#importProject'),
+  deleteProject:       $('#deleteProject'),
 
   // Image inputs
-  fileInput:        $('#fileInput'),
-  cameraInput:      $('#cameraInput'),
-  pasteBtn:         $('#pasteBtn'),
-  resetBtn:         $('#resetBtn'),
-  maxW:             $('#maxW'),
-  keepFullRes:      $('#keepFullRes'),
-  sharpenEdges:     $('#sharpenEdges'),
+  fileInput:           $('#fileInput'),
+  cameraInput:         $('#cameraInput'),
+  pasteBtn:            $('#pasteBtn'),
+  resetBtn:            $('#resetBtn'),
+  maxW:                $('#maxW'),
+  keepFullRes:         $('#keepFullRes'),
+  sharpenEdges:        $('#sharpenEdges'),
 
   // Canvases
-  srcCanvas:        $('#srcCanvas'),
-  outCanvas:        $('#outCanvas'),
+  srcCanvas:           $('#srcCanvas'),
+  outCanvas:           $('#outCanvas'),
 
-  // Palette controls
-  kColors:          $('#kColors'),
-  autoExtract:      $('#autoExtract'),
+  // Palette
+  kColors:             $('#kColors'),
+  autoExtract:         $('#autoExtract'),
 
   // Restricted Palette
-  restrictedList:   $('#restrictedList'),
-  restrictedSelectAll:  $('#restrictedSelectAll'),
-  restrictedSelectNone: $('#restrictedSelectNone'),
-  allowWhite:       $('#allowWhite'),
+  restrictedList:      $('#restrictedList'),
+  restrictedSelectAll: $('#restrictedSelectAll'),
+  restrictedSelectNone:'#restrictedSelectNone'),
+  allowWhite:          $('#allowWhite'),
 
   // Suggestions / Rules
-  btnSuggestHueLuma:  $('#btnSuggestHueLuma'),
-  btnSmartMix:        $('#btnSmartMix'),
-  addRule:            $('#addRule'),
-  btnRefreshOutput:   $('#btnRefreshOutput'),
-  rulesTable:         $('#rulesTable'),
+  btnSuggestHueLuma:   $('#btnSuggestHueLuma'),
+  btnSmartMix:         $('#btnSmartMix'),
+  addRule:             $('#addRule'),
+  btnRefreshOutput:    $('#btnRefreshOutput'),
+  rulesTable:          $('#rulesTable'),
 
-  // Map & Preview
-  wChroma:         $('#wChroma'),
-  wChromaOut:      $('#wChromaOut'),
-  wLight:          $('#wLight'),
-  wLightOut:       $('#wLightOut'),
-  useDither:       $('#useDither'),
-  bgMode:          $('#bgMode'),
-  applyBtn:        $('#applyBtn'),
-  bigRegen:        $('#bigRegen'),
+  // Mapping
+  wChroma:             $('#wChroma'),
+  wChromaOut:          $('#wChromaOut'),
+  wLight:              $('#wLight'),
+  wLightOut:           $('#wLightOut'),
+  useDither:           $('#useDither'),
+  bgMode:              $('#bgMode'),
+  applyBtn:            $('#applyBtn'),
+  bigRegen:            $('#bigRegen'),
 
-  // Export & Codes
-  exportScale:     $('#exportScale'),
-  downloadBtn:     $('#downloadBtn'),
-  vectorExport:    $('#vectorExport'),
-  colorCodeMode:   $('#colorCodeMode'),
-  mailtoLink:      $('#mailtoLink'),
-  exportReport:    $('#exportReport'),
-  codeList:        $('#codeList'),
+  // Export
+  exportScale:         $('#exportScale'),
+  downloadBtn:         $('#downloadBtn'),
+  vectorExport:        $('#vectorExport'),
+  colorCodeMode:       $('#colorCodeMode'),
+  mailtoLink:          $('#mailtoLink'),
+  exportReport:        $('#exportReport'),
+  codeList:            $('#codeList'),
 
   // Misc
-  status:          $('#status'),
-  toasts:          $('#toasts'),
+  status:              $('#status'),
+  toasts:              $('#toasts'),
 
   // Optional editor overlay
-  editorOverlay:   $('#editorOverlay'),
-  openEditor:      $('#openEditor'),
-  editorDone:      $('#editorDone'),
-  editCanvas:      $('#editCanvas'),
-  editOverlay:     $('#editOverlay'),
+  editorOverlay:       $('#editorOverlay'),
+  openEditor:          $('#openEditor'),
+  editorDone:          $('#editorDone'),
+  editCanvas:          $('#editCanvas'),
+  editOverlay:         $('#editOverlay'),
 };
 
 // -----------------------------------------------------------------------------
-// App state
+// State
 // -----------------------------------------------------------------------------
 const DEFAULT_HEXES = ['#CE6D01', '#8B3400', '#F23300', '#0CB300', '#FFFFFF'];
 const DEFAULT_TOL   = 64;
 
 const state = {
-  palette:      [],                   // [{r,g,b,tol}, ...]
-  restricted:   new Set(),            // active ink indices
-  srcImage:     null,                 // original image (HTMLImageElement) or flag
-  fullImage:    null,                 // original full-res image/canvas (optional)
-  mappedMeta:   null,                 // last mapping info (Mapper return)
-  rules:        [],                   // rules table model
-  projects:     [],                   // {id,name,data}
-  key:          'limited-palette-designer:v1',
+  // Colors used everywhere. Array of { r,g,b,tol }
+  palette: [],
+  // Which palette indices are allowed as final inks
+  restricted: new Set(),
+  // Image pipeline
+  srcImage: null,     // we use canvases; keep a flag for "image loaded"
+  mapped:   null,     // last ImageData result (for export)
+  // Rules (Suggestions & Rules table)
+  rules: [],
+  // Projects list (from Store)
+  projects: [],
+  // Persist key
+  key: 'limited-palette-designer:v1',
 };
 
 // -----------------------------------------------------------------------------
-// Boot
+// Init
 // -----------------------------------------------------------------------------
 init();
 
@@ -147,18 +151,18 @@ function init() {
   ensureDefaultPalette();
   renderAll();
   wireEvents();
+  enableUIAccordingToImage(false);
   info('Ready');
 }
 
 // -----------------------------------------------------------------------------
-// Rendering
+// Render
 // -----------------------------------------------------------------------------
 function renderAll() {
   renderRestrictedPaletteUI();
   renderCodeList();
   renderRulesTable();
   syncWeightsUI();
-  updateButtonsEnabled();
 }
 
 function renderRestrictedPaletteUI() {
@@ -168,21 +172,17 @@ function renderRestrictedPaletteUI() {
 
 function renderCodeList() {
   if (!els.codeList) return;
-  const mode = (els.colorCodeMode?.value || 'pms').toLowerCase();
+  const mode  = (els.colorCodeMode?.value || 'pms').toLowerCase();
   const hexes = state.palette.map(p => rgbToHex(p.r, p.g, p.b));
-  const indices = [...state.restricted].sort((a, b) => a - b);
-  const active  = indices.map(i => hexes[i]);
+  const idx   = [...state.restricted].sort((a,b)=>a-b);
+  const act   = idx.map(i => hexes[i]);
 
   const out = [];
   out.push('// Restricted Inks (active):');
-  active.forEach((hx, i) => {
-    out.push(`Ink ${i + 1}: ${formatColorForMode(hx, mode)}`);
-  });
+  act.forEach((hx, i) => out.push(`Ink ${i+1}: ${formatColor(hx, mode)}`));
   out.push('');
   out.push('// Full Palette (with tolerance):');
-  state.palette.forEach((p, i) => {
-    out.push(`#${String(i).padStart(2,'0')} ${rgbToHex(p.r,p.g,p.b)}  tol=${p.tol}`);
-  });
+  state.palette.forEach((p, i) => out.push(`#${String(i).padStart(2,'0')} ${rgbToHex(p.r,p.g,p.b)}  tol=${p.tol}`));
 
   els.codeList.textContent = out.join('\n');
 }
@@ -192,43 +192,37 @@ function renderRulesTable() {
   const tbody = $('tbody', els.rulesTable);
   if (!tbody) return;
   tbody.innerHTML = '';
+
   state.rules.forEach((rule, idx) => {
     const tr = document.createElement('tr');
 
-    const tdOn = cell();
-    const on = input('checkbox'); on.checked = !!rule.on;
+    const tdOn = td(); const on = input('checkbox'); on.checked = !!rule.on;
     on.addEventListener('change', () => { rule.on = on.checked; persistPrefs(); });
     tdOn.append(on);
 
-    const tdTarget = cell();
-    const target = input('text'); target.value = rule.target || '';
+    const tdTarget = td(); const target = input('text'); target.value = rule.target || '';
     target.addEventListener('input', () => { rule.target = target.value; persistPrefs(); });
     tdTarget.append(target);
 
-    const tdPattern = cell();
-    const pattern = input('text'); pattern.value = rule.pattern || '';
+    const tdPattern = td(); const pattern = input('text'); pattern.value = rule.pattern || '';
     pattern.addEventListener('input', () => { rule.pattern = pattern.value; persistPrefs(); });
     tdPattern.append(pattern);
 
-    const tdInks = cell();
-    const inks = input('text'); inks.placeholder = 'e.g. 0,1,3'; inks.value = (rule.inks || []).join(',');
+    const tdInks = td(); const inks = input('text');
+    inks.placeholder = 'e.g. 0,1,3'; inks.value = (rule.inks || []).join(',');
     inks.addEventListener('input', () => {
       rule.inks = (inks.value || '')
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean)
-        .map(n => n|0);
+        .split(',').map(s=>s.trim()).filter(Boolean).map(n=>n|0);
       persistPrefs();
     });
     tdInks.append(inks);
 
-    const tdDen = cell();
-    const den = input('number'); den.min = 0; den.max = 100; den.value = rule.density ?? 100;
+    const tdDen = td(); const den = input('number');
+    den.min = 0; den.max = 100; den.value = rule.density ?? 100;
     den.addEventListener('input', () => { rule.density = den.value|0; persistPrefs(); });
     tdDen.append(den);
 
-    const tdDel = cell();
-    const del = button('Del', 'btn btn-danger');
+    const tdDel = td(); const del = btn('Del','btn btn-danger');
     del.addEventListener('click', () => {
       state.rules.splice(idx, 1);
       renderRulesTable();
@@ -240,9 +234,9 @@ function renderRulesTable() {
     tbody.append(tr);
   });
 
-  function cell() { const td = document.createElement('td'); return td; }
-  function input(t) { const el = document.createElement('input'); el.type = t; return el; }
-  function button(txt, cls) { const b = document.createElement('button'); b.textContent = txt; if (cls) b.className = cls; return b; }
+  function td(){ return document.createElement('td'); }
+  function input(t){ const el = document.createElement('input'); el.type = t; return el; }
+  function btn(txt, cls){ const b = document.createElement('button'); b.textContent = txt; if (cls) b.className = cls; return b; }
 }
 
 function syncWeightsUI() {
@@ -254,21 +248,20 @@ function syncWeightsUI() {
   }
 }
 
-function updateButtonsEnabled() {
-  const hasImage = !!state.srcImage;
-  const set = (el, on) => { if (el) el.disabled = !on; };
-  set(els.resetBtn,      hasImage);
-  set(els.autoExtract,   hasImage);
-  set(els.applyBtn,      hasImage);
-  set(els.downloadBtn,   hasImage);
-  set(els.vectorExport,  hasImage);
+function enableUIAccordingToImage(has) {
+  const en = (el, on) => { if (el) el.disabled = !on; };
+  en(els.resetBtn,     has);
+  en(els.autoExtract,  has);
+  en(els.applyBtn,     has);
+  en(els.downloadBtn,  has);
+  en(els.vectorExport, has);
 }
 
 // -----------------------------------------------------------------------------
 // Events
 // -----------------------------------------------------------------------------
 function wireEvents() {
-  // Editable Color Dots (NEW)
+  // New: editable color dots in Restricted list
   els.restrictedList?.addEventListener('restricted:coloredit', (e) => {
     const { index, hex } = e.detail || {};
     if (index == null || !hex) return;
@@ -284,6 +277,7 @@ function wireEvents() {
     info(`Updated color ${index + 1} → ${hex.toUpperCase()}`);
   });
 
+  // New: checkbox changes in Restricted list
   els.restrictedList?.addEventListener('restricted:toggle', () => {
     const indices = getRestrictedInkIndices({ restrictedList: els.restrictedList });
     state.restricted = new Set(indices);
@@ -291,25 +285,23 @@ function wireEvents() {
     persistPrefs();
   });
 
-  // Image IO
+  // Image I/O
   els.fileInput?.addEventListener('change', handleFile);
   els.cameraInput?.addEventListener('change', handleFile);
   els.pasteBtn?.addEventListener('click', pasteImage);
   els.resetBtn?.addEventListener('click', resetAll);
 
-  // Palette extraction
+  // Extract / Suggestions / Rules
   els.autoExtract?.addEventListener('click', runAutoExtract);
   els.kColors?.addEventListener('change', () => info(`K = ${els.kColors.value}`));
-
-  // Suggestions & Rules
   els.btnSuggestHueLuma?.addEventListener('click', suggestHueLuma);
-  els.btnSmartMix?.addEventListener('click', smartMix);
-  els.addRule?.addEventListener('click', addRule);
+  els.btnSmartMix?.addEventListener('click',  smartMix);
+  els.addRule?.addEventListener('click',      addRule);
   els.btnRefreshOutput?.addEventListener('click', () => mapToRestricted(true));
 
   // Mapping
   els.wChroma?.addEventListener('input', syncWeightsUI);
-  els.wLight?.addEventListener('input',  syncWeightsUI);
+  els.wLight ?.addEventListener('input', syncWeightsUI);
   els.applyBtn?.addEventListener('click', () => mapToRestricted(false));
   els.bigRegen?.addEventListener('click', () => mapToRestricted(true));
 
@@ -323,12 +315,12 @@ function wireEvents() {
   els.openProjects?.addEventListener('click', () => els.projectsPane?.classList.add('open'));
   els.closeProjects?.addEventListener('click', () => els.projectsPane?.classList.remove('open'));
   els.refreshProjects?.addEventListener('click', refreshProjects);
-  els.saveProject?.addEventListener('click', saveProject);
-  els.exportProject?.addEventListener('click', exportProjectJson);
+  els.saveProject?.addEventListener('click',    saveProject);
+  els.exportProject?.addEventListener('click',  exportProjectJson);
   els.importProject?.addEventListener('change', importProjectJson);
-  els.deleteProject?.addEventListener('click', deleteSelectedProject);
+  els.deleteProject?.addEventListener('click',  deleteSelectedProject);
 
-  // Persistence on leave
+  // Persist on leave
   window.addEventListener('beforeunload', persistPrefs);
 }
 
@@ -341,9 +333,7 @@ async function handleFile(e) {
 
   await loadBlobToCanvas(file, els.srcCanvas);
   state.srcImage = true;
-
-  // enable auto-extract immediately
-  updateButtonsEnabled();
+  enableUIAccordingToImage(true);
   info(`Loaded ${file.name}`);
 }
 
@@ -356,7 +346,7 @@ async function pasteImage() {
           const blob = await item.getType(type);
           await loadBlobToCanvas(blob, els.srcCanvas);
           state.srcImage = true;
-          updateButtonsEnabled();
+          enableUIAccordingToImage(true);
           info('Image pasted.');
           return;
         }
@@ -373,24 +363,33 @@ function resetAll() {
   clearCanvas(els.srcCanvas);
   clearCanvas(els.outCanvas);
   state.srcImage = null;
+  state.mapped = null;
+  enableUIAccordingToImage(false);
   info('Reset.');
-  updateButtonsEnabled();
 }
 
+// -----------------------------------------------------------------------------
+// Palette extraction & suggestions
+// -----------------------------------------------------------------------------
 async function runAutoExtract() {
   if (!els.srcCanvas) return;
   const k = clamp(els.kColors?.value|0 || 10, 2, 16);
-  if (!Palette || !Palette.autoExtract) {
-    info('Auto-extract module not available.');
+
+  if (!Palette?.autoPaletteFromCanvasHybrid) {
+    info('Auto-extract not available.');
     return;
   }
-
   try {
-    info('Extracting palette...');
-    const result = await Palette.autoExtract(els.srcCanvas, { k });
-    // result: [{r,g,b}, ...]
-    state.palette = (result || []).map(rgb => ({ ...rgb, tol: DEFAULT_TOL }));
+    info('Extracting palette…');
+    const hexes = Palette.autoPaletteFromCanvasHybrid(els.srcCanvas, k) || [];
+    if (!hexes.length) { info('No colors found.'); return; }
+
+    state.palette = hexes.map(hx => {
+      const { r, g, b } = hexToRgb(hx);
+      return { r, g, b, tol: DEFAULT_TOL };
+    });
     state.restricted = new Set(state.palette.map((_, i) => i));
+
     renderAll();
     persistPrefs();
     info(`Extracted ${state.palette.length} colors.`);
@@ -400,48 +399,75 @@ async function runAutoExtract() {
   }
 }
 
-async function mapToRestricted(forceRemap = false) {
-  if (!Mapper || !Mapper.mapImage) {
-    info('Mapping module not available.');
-    return;
+async function suggestHueLuma() {
+  if (!Suggest?.suggestByHueLuma) { info('Suggest module not available.'); return; }
+  try {
+    const hexes = state.palette.map(p => rgbToHex(p.r,p.g,p.b));
+    const allowed = [...state.restricted].sort((a,b)=>a-b);
+    const picks = Suggest.suggestByHueLuma(els.srcCanvas, hexes, allowed) || [];
+    if (picks.length) {
+      state.restricted = new Set(picks);
+      renderRestrictedPaletteUI();
+      renderCodeList();
+      persistPrefs();
+    }
+    info(`Suggested ${picks.length} inks by Hue/Luma.`);
+  } catch (e) {
+    console.warn(e); info('Suggestion failed.');
   }
+}
+
+async function smartMix() {
+  if (!Suggest?.smartMixSuggest) { info('Smart Mix module not available.'); return; }
+  try {
+    const allowed = [...state.restricted].sort((a,b)=>a-b);
+    const hexes   = state.palette.map(p => rgbToHex(p.r,p.g,p.b));
+    const target  = hexes[allowed[0]] ?? hexes[0];
+    const res     = Suggest.smartMixSuggest(target, hexes, allowed);
+    info(res ? `Smart Mix: ${JSON.stringify(res)}` : 'No mix found.');
+  } catch (e) {
+    console.warn(e); info('Smart Mix failed.');
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Mapping
+// -----------------------------------------------------------------------------
+async function mapToRestricted(forceRemap = false) {
+  if (!Mapper?.mapToPalette) { info('Mapping module not available.'); return; }
   if (!els.srcCanvas || !els.outCanvas) return;
 
-  const indices = [...state.restricted].sort((a, b) => a - b);
-  const inks = indices.map(i => state.palette[i]).filter(Boolean);
-  if (!inks.length) {
-    info('Select at least one ink.');
-    return;
-  }
+  const idx  = [...state.restricted].sort((a,b)=>a-b);
+  const inks = idx.map(i => state.palette[i]).filter(Boolean);
+  if (!inks.length) { info('Select at least one ink.'); return; }
 
   const weights = {
-    chroma: (els.wChroma?.value|0 || 100) / 100,
-    luma:   (els.wLight?.value|0  || 100) / 100,
+    wC: (els.wChroma?.value|0 || 100)/100,
+    wL: (els.wLight ?.value|0 || 100)/100,
   };
   const opts = {
     dither: !!els.useDither?.checked,
     bgMode: els.bgMode?.value || 'keep',
-    allowWhite: !!els.allowWhite?.checked,
+    ...weights,
     forceRemap,
   };
 
   try {
     info('Mapping…');
-    const mapped = await Mapper.mapImage(els.srcCanvas, inks, weights, opts);
-    state.mappedMeta = mapped || null;
+    const sctx = els.srcCanvas.getContext('2d', { willReadFrequently: true });
+    const srcData = sctx.getImageData(0, 0, els.srcCanvas.width, els.srcCanvas.height);
 
-    // draw mapped output
-    if (mapped?.canvas) {
-      copyCanvas(mapped.canvas, els.outCanvas);
-    } else if (mapped?.imageData) {
-      drawImageData(mapped.imageData, els.outCanvas);
-    }
+    const outData = Mapper.mapToPalette(srcData, inks, opts); // ImageData in/out
+    state.mapped  = outData;
 
-    // optional sharpen
+    els.outCanvas.width  = outData.width;
+    els.outCanvas.height = outData.height;
+    els.outCanvas.getContext('2d').putImageData(outData, 0, 0);
+
     if (els.sharpenEdges?.checked && Sharpen?.unsharpMask) {
       const ctx = els.outCanvas.getContext('2d', { willReadFrequently: true });
-      const imgData = ctx.getImageData(0, 0, els.outCanvas.width, els.outCanvas.height);
-      const sharp = Sharpen.unsharpMask(imgData, { amount: 0.5, radius: 0.6, threshold: 2 });
+      const img = ctx.getImageData(0, 0, els.outCanvas.width, els.outCanvas.height);
+      const sharp = Sharpen.unsharpMask(img, 0.5); // amount
       ctx.putImageData(sharp, 0, 0);
     }
 
@@ -453,98 +479,76 @@ async function mapToRestricted(forceRemap = false) {
 }
 
 // -----------------------------------------------------------------------------
-// Suggestions & rules
-// -----------------------------------------------------------------------------
-async function suggestHueLuma() {
-  if (!Suggest?.byHueLuma) {
-    info('Suggest-by-hue module not available.');
-    return;
-  }
-  const hexes = state.palette.map(p => rgbToHex(p.r, p.g, p.b));
-  try {
-    const picks = await Suggest.byHueLuma(hexes);
-    // picks -> array of indices; set them active:
-    state.restricted = new Set(picks);
-    renderRestrictedPaletteUI();
-    renderCodeList();
-    persistPrefs();
-    info(`Suggested ${picks.length} inks by Hue/Luma.`);
-  } catch (e) {
-    console.warn(e);
-    info('Suggestion failed.');
-  }
-}
-
-async function smartMix() {
-  if (!Suggest?.smartMix) {
-    info('Smart Mix module not available.');
-    return;
-  }
-  try {
-    const indices = [...state.restricted].sort((a, b) => a - b);
-    const inks = indices.map(i => state.palette[i]).filter(Boolean);
-    const res = await Suggest.smartMix(inks, { allowWhite: !!els.allowWhite?.checked });
-    showToast(`Smart Mix produced ${res?.length || 0} mixes.`);
-  } catch (e) {
-    console.warn(e);
-    info('Smart Mix failed.');
-  }
-}
-
-function addRule() {
-  state.rules.push({ on: true, target: '', pattern: '', inks: [], density: 100 });
-  renderRulesTable();
-  persistPrefs();
-}
-
-// -----------------------------------------------------------------------------
-// Export
+// Exports
 // -----------------------------------------------------------------------------
 async function exportPng() {
-  if (!PNG?.exportPNG) {
-    info('PNG export module not available.');
-    return;
-  }
+  if (!PNG?.exportPNG) { info('PNG export not available.'); return; }
+
   try {
     const scale = clamp(els.exportScale?.value|0 || 1, 1, 8);
-    const blob = await PNG.exportPNG(els.outCanvas || els.srcCanvas, { scale });
-    await Files?.saveBlob?.(blob, 'palette-mapper.png');
+    const imgData = getExportImageData();
+    if (!imgData) { info('Nothing to export.'); return; }
+
+    const blob = PNG.exportPNG(imgData, scale);
+    if (Files?.saveBlob) {
+      await Files.saveBlob(blob, 'palette-mapper.png');
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href:url, download:'palette-mapper.png' });
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
     info('PNG exported.');
   } catch (e) {
-    console.warn(e);
-    info('PNG export failed.');
+    console.warn(e); info('PNG export failed.');
   }
 }
 
 async function exportSvg() {
-  if (!SVG?.exportSVG) {
-    info('SVG export module not available.');
-    return;
-  }
+  if (!SVG?.exportSVG) { info('SVG export not available.'); return; }
+
   try {
-    const svgText = await SVG.exportSVG(state.mappedMeta);
-    await Files?.saveText?.(svgText, 'palette-mapper.svg', 'image/svg+xml');
+    const imgData = getExportImageData();
+    if (!imgData) { info('Nothing to export.'); return; }
+
+    const allowedIdx = [...state.restricted].sort((a,b)=>a-b);
+    const paletteHex = allowedIdx.map(i => rgbToHex(state.palette[i].r, state.palette[i].g, state.palette[i].b));
+    const svgText    = SVG.exportSVG(imgData, paletteHex, paletteHex.length);
+
+    if (Files?.saveText) {
+      await Files.saveText(svgText, 'palette-mapper.svg', 'image/svg+xml');
+    } else {
+      const blob = new Blob([svgText], { type:'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href:url, download:'palette-mapper.svg' });
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
     info('SVG exported.');
   } catch (e) {
-    console.warn(e);
-    info('SVG export failed.');
+    console.warn(e); info('SVG export failed.');
   }
 }
 
 async function exportReport() {
-  if (!Report?.exportReport) {
-    info('Report module not available.');
-    return;
-  }
+  if (!Report?.buildPrinterReport) { info('Report module not available.'); return; }
+
   try {
-    const indices = [...state.restricted].sort((a, b) => a - b);
-    const inks = indices.map(i => state.palette[i]).filter(Boolean);
-    const text = await Report.exportReport({ inks, rules: state.rules });
-    await Files?.saveText?.(text, 'palette-report.txt', 'text/plain');
+    // if your report builder relies on PMS json, load once:
+    if (Report?.loadPmsJson && !exportReport._pmsLoaded) {
+      exportReport._pmsLoaded = true;
+      try { await Report.loadPmsJson('./assets/pms_solid_coated.json'); } catch {}
+    }
+    const txt = Report.buildPrinterReport(); // uses repo’s internal state logic
+    if (Files?.saveText) {
+      await Files.saveText(txt, 'palette-report.txt', 'text/plain');
+    } else {
+      const blob = new Blob([txt], { type:'text/plain' });
+      const url  = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href:url, download:'palette-report.txt' });
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
     info('Report exported.');
   } catch (e) {
-    console.warn(e);
-    info('Report failed.');
+    console.warn(e); info('Report failed.');
   }
 }
 
@@ -558,8 +562,7 @@ async function refreshProjects() {
     renderProjectsList();
     info('Projects refreshed.');
   } catch (e) {
-    console.warn(e);
-    info('Could not refresh projects.');
+    console.warn(e); info('Could not refresh projects.');
   }
 }
 
@@ -567,10 +570,10 @@ function renderProjectsList() {
   if (!els.projectsList) return;
   els.projectsList.innerHTML = '';
   state.projects.forEach(p => {
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-ghost';
-    btn.textContent = p.name || p.id;
-    btn.addEventListener('click', async () => {
+    const b = document.createElement('button');
+    b.className = 'btn btn-ghost';
+    b.textContent = p.name || p.id;
+    b.addEventListener('click', async () => {
       try {
         const data = await Store?.load?.(p.id);
         if (!data) return;
@@ -578,39 +581,42 @@ function renderProjectsList() {
         renderAll();
         showToast(`Loaded project: ${p.name || p.id}`);
       } catch (e) {
-        console.warn(e);
-        info('Load failed.');
+        console.warn(e); info('Load failed.');
       }
     });
-    els.projectsList.append(btn);
+    els.projectsList.append(b);
   });
 }
 
 async function saveProject() {
   try {
-    const data = serializeProject();
-    const saved = await Store?.save?.(data);
+    const payload = serializeProject();
+    const saved   = await Store?.save?.(payload);
     if (saved) showToast('Project saved.');
   } catch (e) {
-    console.warn(e);
-    info('Save failed.');
+    console.warn(e); info('Save failed.');
   }
 }
 
 async function exportProjectJson() {
   try {
     const json = JSON.stringify(serializeProject(), null, 2);
-    await Files?.saveText?.(json, 'palette-project.json', 'application/json');
+    if (Files?.saveText) {
+      await Files.saveText(json, 'palette-project.json', 'application/json');
+    } else {
+      const blob = new Blob([json], { type:'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href:url, download:'palette-project.json' });
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
     showToast('Project JSON exported.');
   } catch (e) {
-    console.warn(e);
-    info('Export failed.');
+    console.warn(e); info('Export failed.');
   }
 }
 
 async function importProjectJson(e) {
-  const file = e.target.files?.[0];
-  if (!file) return;
+  const file = e.target.files?.[0]; if (!file) return;
   try {
     const text = await file.text();
     const data = JSON.parse(text);
@@ -618,8 +624,7 @@ async function importProjectJson(e) {
     renderAll();
     showToast('Project imported.');
   } catch (err) {
-    console.warn(err);
-    info('Import failed.');
+    console.warn(err); info('Import failed.');
   } finally {
     e.target.value = '';
   }
@@ -628,33 +633,33 @@ async function importProjectJson(e) {
 async function deleteSelectedProject() {
   try {
     const list = await Store?.list?.();
-    const last = list?.[0];
-    if (!last?.id) { info('No project to delete.'); return; }
-    await Store?.remove?.(last.id);
-    showToast(`Deleted project ${last.name || last.id}.`);
+    const first = list?.[0];
+    if (!first?.id) { info('No project to delete.'); return; }
+    await Store?.remove?.(first.id);
+    showToast(`Deleted project ${first.name || first.id}.`);
     refreshProjects();
   } catch (e) {
-    console.warn(e);
-    info('Delete failed.');
+    console.warn(e); info('Delete failed.');
   }
 }
 
 function serializeProject() {
-  const payload = {
+  return {
     palette: state.palette,
     restricted: [...state.restricted],
     rules: state.rules,
     weights: {
       chroma: (els.wChroma?.value|0 || 100)/100,
-      luma:   (els.wLight?.value|0  || 100)/100,
+      luma:   (els.wLight ?.value|0 || 100)/100,
     }
   };
-  return payload;
 }
 
 function hydrateFromProject(data) {
   if (Array.isArray(data.palette)) {
-    state.palette = data.palette.map(p => ({ r:p.r|0, g:p.g|0, b:p.b|0, tol:(p.tol ?? DEFAULT_TOL)|0 }));
+    state.palette = data.palette.map(p => ({
+      r: p.r|0, g: p.g|0, b: p.b|0, tol: (p.tol ?? DEFAULT_TOL)|0
+    }));
   }
   if (Array.isArray(data.restricted)) {
     state.restricted = new Set(data.restricted.map(i => i|0));
@@ -665,7 +670,7 @@ function hydrateFromProject(data) {
 }
 
 // -----------------------------------------------------------------------------
-// Persistence (local)
+// Persistence
 // -----------------------------------------------------------------------------
 function loadPrefs() {
   try {
@@ -680,8 +685,7 @@ function loadPrefs() {
 
 function persistPrefs() {
   try {
-    const data = serializeProject();
-    localStorage.setItem(state.key, JSON.stringify(data));
+    localStorage.setItem(state.key, JSON.stringify(serializeProject()));
   } catch (e) {
     console.warn('Prefs save failed:', e);
   }
@@ -693,8 +697,8 @@ function persistPrefs() {
 function ensureDefaultPalette() {
   if (state.palette?.length) return;
   state.palette = DEFAULT_HEXES.map(h => {
-    const rgb = hexToRgb(h) || { r: 255, g: 255, b: 255 };
-    return { ...rgb, tol: DEFAULT_TOL };
+    const { r, g, b } = hexToRgb(h) || { r:255, g:255, b:255 };
+    return { r, g, b, tol: DEFAULT_TOL };
   });
   state.restricted = new Set(state.palette.map((_, i) => i));
 }
@@ -708,59 +712,45 @@ async function loadBlobToCanvas(blob, canvas) {
       drawToCanvas(img, canvas, Number(els.maxW?.value || 1400));
       URL.revokeObjectURL(url);
     };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      info('Could not load image.');
-    };
+    img.onerror = () => { URL.revokeObjectURL(url); info('Could not load image.'); };
     img.src = url;
   } catch (e) {
     URL.revokeObjectURL(url);
-    console.warn(e);
-    info('Could not load image.');
+    console.warn(e); info('Could not load image.');
   }
 }
 
 function drawToCanvas(img, canvas, maxW = 1400) {
   if (!canvas) return;
-  const w = img.naturalWidth;
-  const h = img.naturalHeight;
-  const scale = Math.min(1, maxW > 0 ? maxW / w : 1);
-  const dw = Math.max(1, Math.round(w * scale));
-  const dh = Math.max(1, Math.round(h * scale));
-  canvas.width = dw;
-  canvas.height = dh;
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const scale = Math.min(1, maxW>0 ? maxW/w : 1);
+  const dw = Math.max(1, Math.round(w*scale));
+  const dh = Math.max(1, Math.round(h*scale));
+  canvas.width = dw; canvas.height = dh;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.clearRect(0, 0, dw, dh);
-  ctx.drawImage(img, 0, 0, dw, dh);
+  ctx.clearRect(0,0,dw,dh);
+  ctx.drawImage(img,0,0,dw,dh);
 }
 
 function clearCanvas(canvas) {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
   canvas.width = 1; canvas.height = 1;
 }
 
-function copyCanvas(src, dst) {
-  dst.width = src.width; dst.height = src.height;
-  const dctx = dst.getContext('2d');
-  dctx.clearRect(0, 0, dst.width, dst.height);
-  dctx.drawImage(src, 0, 0);
+function getExportImageData() {
+  const c = els.outCanvas && els.outCanvas.width > 1 ? els.outCanvas : els.srcCanvas;
+  if (!c) return null;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  return ctx.getImageData(0, 0, c.width, c.height);
 }
 
-function drawImageData(imageData, canvas) {
-  canvas.width = imageData.width;
-  canvas.height = imageData.height;
-  const ctx = canvas.getContext('2d');
-  ctx.putImageData(imageData, 0, 0);
-}
-
-function formatColorForMode(hex, mode) {
+function formatColor(hex, mode) {
   if (mode === 'hex') return hex.toUpperCase();
-  // For PMS or other systems, your Report/Suggest modules may provide a
-  // converter; if not available, fall back to HEX.
+  // If your report module provides a PMS converter, use it; else fallback:
   if (Report?.toPMS) {
     try { return Report.toPMS(hex) || hex.toUpperCase(); } catch {}
   }
@@ -783,5 +773,5 @@ function showToast(msg) {
 }
 
 // -----------------------------------------------------------------------------
-// End of file
+// End
 // -----------------------------------------------------------------------------
