@@ -78,7 +78,7 @@ const els = {
   // Restricted Palette
   restrictedList:      $('#restrictedList'),
   restrictedSelectAll: $('#restrictedSelectAll'),
-  restrictedSelectNone:'#restrictedSelectNone'),
+  restrictedSelectNone:$('#restrictedSelectNone'),
   allowWhite:          $('#allowWhite'),
 
   // Suggestions / Rules
