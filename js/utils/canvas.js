@@ -1,6 +1,11 @@
 // js/utils/canvas.js
 // Canvas helpers for orientation-aware drawing and preview sizing.
 
+/** Clamp a number to [lo, hi]. */
+export function clamp(v, lo = 0, hi = 1) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
 /**
  * Compute preview dimensions for a given original size and max preview width.
  * Returns integers suitable for canvas width/height and a scale factor.
@@ -62,11 +67,8 @@ export function drawImageWithOrientation(
 
   ctx.save();
   applyOrientationTransform(ctx, o, dw, dh);
-  if (hasSrcRect) {
-    ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
-  } else {
-    ctx.drawImage(img, dx, dy, dw, dh);
-  }
+  if (hasSrcRect) ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+  else ctx.drawImage(img, dx, dy, dw, dh);
   ctx.restore();
 }
 
