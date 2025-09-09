@@ -27,13 +27,13 @@ export function fitPreviewW(origW, origH, maxPreviewW = 1400) {
  * @param {number} orientation
  * @returns {{ width:number, height:number }}
  */
-export function getOrientedDims(width, height, orientation = 1) {
-  const o = Number(orientation) || 1;
-  if (o >= 5 && o <= 8) {
-    return { width: height, height: width };
-  }
-  return { width, height };
-}
+
+
+export {
+  getOrientedDims,
+  drawImageWithOrientation
+};
+   
 
 /**
  * Draw an image on a 2D context taking EXIF orientation into account.
