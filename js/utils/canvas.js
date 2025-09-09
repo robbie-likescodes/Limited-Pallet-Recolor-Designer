@@ -27,13 +27,11 @@ export function fitPreviewW(origW, origH, maxPreviewW = 1400) {
  * @param {number} orientation
  * @returns {{ width:number, height:number }}
  */
-
-
-export {
-  getOrientedDims,
-  drawImageWithOrientation
-};
-   
+export function getOrientedDims(width, height, orientation = 1) {
+  const o = Number(orientation) || 1;
+  if (o >= 5 && o <= 8) return { width: height, height: width };
+  return { width, height };
+}
 
 /**
  * Draw an image on a 2D context taking EXIF orientation into account.
@@ -64,62 +62,25 @@ export function drawImageWithOrientation(
 
   ctx.save();
   applyOrientationTransform(ctx, o, dw, dh);
-
   if (hasSrcRect) {
     ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
   } else {
     ctx.drawImage(img, dx, dy, dw, dh);
   }
-
   ctx.restore();
 }
 
-/**
- * Internal helper: apply transform for a given EXIF orientation.
- */
+/** Internal helper: apply transform for a given EXIF orientation. */
 function applyOrientationTransform(ctx, o, w, h) {
   switch (o) {
-    case 2: // horizontal flip
-      ctx.translate(w, 0);
-      ctx.scale(-1, 1);
-      break;
-    case 3: // 180°
-      ctx.translate(w, h);
-      ctx.rotate(Math.PI);
-      break;
-    case 4: // vertical flip
-      ctx.translate(0, h);
-      ctx.scale(1, -1);
-      break;
-    case 5: // vertical flip + 90° CW
-      ctx.rotate(0.5 * Math.PI);
-      ctx.scale(1, -1);
-      break;
-    case 6: // 90° CW
-      ctx.rotate(0.5 * Math.PI);
-      ctx.translate(0, -h);
-      break;
-    case 7: // horizontal flip + 90° CW
-      ctx.rotate(0.5 * Math.PI);
-      ctx.translate(w, -h);
-      ctx.scale(-1, 1);
-      break;
-    case 8: // 90° CCW
-      ctx.rotate(-0.5 * Math.PI);
-      ctx.translate(-w, 0);
-      break;
+    case 2: ctx.translate(w, 0); ctx.scale(-1, 1); break;                // horizontal flip
+    case 3: ctx.translate(w, h); ctx.rotate(Math.PI); break;              // 180°
+    case 4: ctx.translate(0, h); ctx.scale(1, -1); break;                 // vertical flip
+    case 5: ctx.rotate(0.5 * Math.PI); ctx.scale(1, -1); break;           // vertical flip + 90° CW
+    case 6: ctx.rotate(0.5 * Math.PI); ctx.translate(0, -h); break;       // 90° CW
+    case 7: ctx.rotate(0.5 * Math.PI); ctx.translate(w, -h); ctx.scale(-1, 1); break; // h-flip + 90° CW
+    case 8: ctx.rotate(-0.5 * Math.PI); ctx.translate(-w, 0); break;      // 90° CCW
     case 1:
-    default:
-      // normal
-      break;
+    default: break; // normal
   }
 }
-
-// -----------------------------------------------------------------------------
-// Grouped export for convenience
-// -----------------------------------------------------------------------------
-export {
-  getOrientedDims,
-  drawImageWithOrientation,
-  fitPreviewW
-};
